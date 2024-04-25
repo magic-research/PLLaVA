@@ -26,8 +26,18 @@ We've briefly introduce our work in [PLAVA](#%EF%B8%8F-plava). For more details,
     - We are releasing our code/models/datasets.
 
 ## 🏖️ PLAVA
-TODO: Introduction to PLAVA
+### Abstract
+Vision-language pre-training (VLP) has significantly elevated performance across a range of vision-language applications. Yet, the pre-training process for video-related tasks demands an exceptionally high degree of computational and data resources. This paper investigates a straightforward, highly efficient, and resource-light approach to adapting an existing image-language pre-training model for video data. Our preliminary experiments reveal that directly fine-tuning pre-trained image-language models with multiple frames on video datasets leads to performance saturation or even a drop in caption-related tasks. Besides, it is also vulnerable to prompts and tends to provide short descriptions. We conducted a deep analysis and observed that the performance saturation and the vulnerability might be related to the dominant patches that exist in some single video patches. We then propose a simple pooling strategy to smooth the feature distribution along the temporal dimension and thus reduce the dominant impacts from some extreme tokens. The new model is termed Pooling LLaVA, or PLLaVA in short. With the proposed pooling strategy, we achieve new state-of-the-art performance on all evaluated datasets. Notably, on the recent popular Video ChatGPT benchmark, PLLaVA achieves a score of 3.48 out of 5 on average of five evaluated dimensions, which is the new state-of-the-art score on the leaderboard and is 0.31 higher than the previous SOTA results from GPT4V (IG-VLM). On the latest multi-choice benchmark MVBench, PLLaVA achieves 58.1% accuracy on average across 20 sub-tasks, which is the new state-of-the-art result and is 14.5% higher than GPT4V (IG-VLM).
+![](assert/module.png)
+### SEARCHING FOR OPTILAL POOLING STRATEGY
+There are two dimensions for the pooling strategy: spatial dimension and the temporal dimension. We emperically found that reducing the spatial dimension with larger temporal dimension could lead to better model perfromance, compared to reducing the temporal dimension directly.
 
+![](assert/zeroshot.png)
+
+### STATE-OF-THE-ART PERFORMANCE
+We compare the performance of PLAVA with recent popular methods over both question-qnswer and captioning datasets. The results are shown below.
+
+![](assert/performance.png)
 
 ## :hammer: Usage
 This section provides guidance on how to run, train, and evaluate our models.
@@ -38,27 +48,97 @@ First you will need to set up the environment, and download some pretrained weig
 
 This repo is built up using [transformers](https://github.com/huggingface/transformers) for model construction along with [accelerate](https://github.com/huggingface/transformers) for distributed training. Follow the instruction to install the needed environment.
 
-1. Firstly, install [pytorch](https://pytorch.org/) from the official website. The code runs on torch 2.2.*, cu118 or cu122.
+1. Firstly, install [pytorch](https://pytorch.org/) from the official website. The code runs on torch 2.2.*, cu118 or cu122. Select the version that suits your drive version.
 ```
 torch                       2.2.1+cu118
 torchaudio                  2.2.1+cu118
 torchvision                 0.17.1+cu118
 ```
-
-2. Install the other requirements, This file list serve for torch 2.2.1+cu118 with driver version 11.6
+If your driver version is cu116, you could probably try installing with the follow scripts:
+```bash
+pip install -r requirements.txt
 ```
-pip install -r requirements.no_torch.txt
-```
 
-3. Prepare the model.
+Otherwise, you would need to install torch for your server first, then install the others:
+```bash
+pip install -r requirements.torch.txt # decide your own requirements, or install torch directly following the official website.
+pip install -r requirements.no_torch.txt # install the following
+```
+We recommend using torch 2.2.1+cu118 or torch 2.2.1+cu122.
+
+2. Prepare the model.
 We prefer to have huggingface models explicitly download to a MODELS directory. However, if you are familiar with huggingface-hub usage, feel free to organize the model yourself.
 ```
 python python_scripts/hf.py
 ```
+The model directory should look like this, where you would only need the corresponding model's weights and directory.
+```
+$ tree MODELS
+MODELS
+|-- plava-13b
+|   |-- added_tokens.json
+|   |-- config.json
+|   |-- generation_config.json
+|   |-- model-00001-of-00006.safetensors
+|   |-- model-00002-of-00006.safetensors
+|   |-- model-00003-of-00006.safetensors
+|   |-- model-00004-of-00006.safetensors
+|   |-- model-00005-of-00006.safetensors
+|   |-- model-00006-of-00006.safetensors
+|   |-- model.safetensors.index.json
+|   |-- preprocessor_config.json
+|   |-- processor_config.json
+|   |-- special_tokens_map.json
+|   |-- tokenizer.json
+|   |-- tokenizer.model
+|   `-- tokenizer_config.json
+|-- plava-34b
+|   |-- added_tokens.json
+|   |-- config.json
+|   |-- generation_config.json
+|   |-- model-00001-of-00015.safetensors
+|   |-- model-00002-of-00015.safetensors
+|   |-- model-00003-of-00015.safetensors
+|   |-- model-00004-of-00015.safetensors
+|   |-- model-00005-of-00015.safetensors
+|   |-- model-00006-of-00015.safetensors
+|   |-- model-00007-of-00015.safetensors
+|   |-- model-00008-of-00015.safetensors
+|   |-- model-00009-of-00015.safetensors
+|   |-- model-00010-of-00015.safetensors
+|   |-- model-00011-of-00015.safetensors
+|   |-- model-00012-of-00015.safetensors
+|   |-- model-00013-of-00015.safetensors
+|   |-- model-00014-of-00015.safetensors
+|   |-- model-00015-of-00015.safetensors
+|   |-- model.safetensors-deprecated
+|   |-- model.safetensors.index.json
+|   |-- preprocessor_config.json
+|   |-- processor_config.json
+|   |-- special_tokens_map.json
+|   |-- tokenizer.json
+|   |-- tokenizer.model
+|   `-- tokenizer_config.json
+|-- plava-7b
+    |-- added_tokens.json
+    |-- config.json
+    |-- generation_config.json
+    |-- model-00001-of-00003.safetensors
+    |-- model-00002-of-00003.safetensors
+    |-- model-00003-of-00003.safetensors
+    |-- model.safetensors.index.json
+    |-- preprocessor_config.json
+    |-- processor_config.json
+    |-- special_tokens_map.json
+    |-- tokenizer.json
+    |-- tokenizer.model
+    `-- tokenizer_config.json
+```
+
+
 With the above steps, you should be able to proceed on the following usages.
 
 ### Run Application
-Aside from this
 To run our models, make sure you have downloaded a model pretrained weights from the huggingface spaces. Then, run the following scripts with the corresponding path input.
 - model_dir: your model directory, one with config.json as compatible with transformers
 - weights_dir: your weights directory. could be the same as model_dir, but if you have a weights directory for the lora weights, you should set this weights_dir to that directory to load the lora weights. Also, it would need to contain a config.json file under.
@@ -73,7 +153,7 @@ Now checkout the application demo and try play with PLAVA!
 Follow the following steps to reproduce our results or train your own variant:
 
 #### 1. Data Preparation
-
+TODO: 
 To train our model from a starting Image-aligned Vision LLM, you would need to download the data first. Our data set up is mainly based on the original Videochat2's training data. Checkout [Instruction Data](./DATA.md) to prepare the instruction training data. Eventually, you should have a folder organized as following:
 ```TODO:
 (magic_py310) (base) xulin@9f0c9285c368:~/yilin/magic_video$ ls -l DATAS/TRAIN_TEST
@@ -111,9 +191,9 @@ use_cpu: false
 Checkout out the [Accelerate](https://huggingface.co/docs/accelerate/index) documents for more details.
 
 ##### Overwatch the training configuration
-Next, you should go over a basic training configuration of the training process in [here](tasks/train/config_magic_nframe.py). Then passing this file as the first arg to the training script would utilize every arguments in the file. You can customize some of the hyper parameters for your own training process by passing them in the format of "key" "value" pair in the following arguments. A example training scripts could be find TODO: [here](scripts/train_magic.sh). 
+Next, you should go over a basic training configuration of the training process in [here](tasks/train/config_magic_nframe.py). Then passing this file as the first arg to the training script would utilize every arguments in the file. You can customize some of the hyper parameters for your own training process by passing them in the format of "key" "value" pair in the following arguments. A example training scripts could be find [here](scripts/train_plava.sh). 
 
-This part of configuration is mostly based on the original [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). Salute to those fantastic researchers & engineers.
+The code of configuration is mostly based on the original [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2) codebase. Salute to those fantastic researchers & engineers. Checkout the used [configuration](tasks/train/config_plava_nframe.py) to set up a customized training!
 
 With the above steps, you would be able to start the training process. The output would be well organized in the output directory, each a qualified model directory to pass in to demo as weights_dir, since we are only saveing the lora weights and projector weights to avoide redundancy.
 
@@ -121,7 +201,7 @@ With the above steps, you would be able to start the training process. The outpu
 This section mainly introduce how to reproduce the evaluation or evaluate your own model.
 
 #### Set up Evaluation Data
-Make sure you set up the "DATAS" directory as, then you would be able to run the inference with fortune!
+Make sure you set up the "DATAS" directory as in [TODO](), then you would be able to run the inference with fortune! The evaluation data directory of DATAS would look like: 
 ```
 DATAS/:
       TGIF_FrameQA.csv
@@ -169,20 +249,19 @@ DATAS/Recaption/Inter4K/60fps/UHD:
 ```
 
 #### Start Evaluate
-Once you have construted the evaluation data, you can start the evaluation as in [here](scripts/eval.sh)
+Once you have construted the evaluation data, you can start the evaluation as in [here](scripts/eval.sh) TODO: eval 34b
 ```
 bash scripts/eval.sh
 ```
-Same as running the demo, you would need to determine the model_dir and weights_dir to evaluate the model. Feel free to comment out some commands and produce partial evaluation. TODO: refine eval_all.sh
+Same as running the demo, you would need to determine the model_dir and weights_dir to evaluate the model. Feel free to comment out some commands and produce partial evaluation. 
 
 #### Overwatch the Results
 The evaluation results would be shown to you with our results gallery demo:
-```
-bash scripts/gallery.sh
+```bash
+bash scripts/gallery.sh 
 ```
 
 Feel free to use the compare version to compare differnt models' results or use the single gallery version to checkout one model's results. They are basically the same. Checkout the [script](scripts/gallery.sh) for more details
-
 
 # :page_facing_up: Citation
 
@@ -192,7 +271,7 @@ If you find this project useful in your research, please consider cite:
 ```
 
 # :dizzy: Acknowledgement
-This code base is mainly built upon [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2).
+This code base is mainly built upon [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). SALUTE.
 
 We would also like to recognize and commend the following open source projects, thank you for your great contribution to the open source community:
 

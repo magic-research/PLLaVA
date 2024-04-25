@@ -50,7 +50,7 @@ fiftyone==0.23.6
 fiftyone-brain==0.16.1
 fiftyone_db==1.1.2
 filelock==3.9.0
-flash-attn==2.5.6
+https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.6/flash_attn-2.5.6+cu118torch2.2cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 fonttools==4.49.0
 fsspec==2024.2.0
 ftfy==6.1.3
