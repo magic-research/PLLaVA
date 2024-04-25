@@ -4,16 +4,16 @@ import gradio as gr
 from gradio.themes.utils import colors, fonts, sizes
 
 from utils.easydict import EasyDict
-from tasks.eval.model_utils import load_plava
+from tasks.eval.model_utils import load_pllava
 from tasks.eval.eval_utils import (
-    ChatPlava,
+    ChatPllava,
     conv_plain_v1,
     Conversation,
     conv_templates
 )
-from tasks.eval.demo import plava_theme
+from tasks.eval.demo import pllava_theme
 
-SYSTEM="""You are Plava, a large vision-language assistant. 
+SYSTEM="""You are Pllava, a large vision-language assistant. 
 You are able to understand the video content that the user provides, and assist the user with a variety of tasks using natural language.
 Follow the instructions carefully and explain your answers in detail based on the provided video.
 """
@@ -25,8 +25,8 @@ INIT_CONVERSATION: Conversation = conv_plain_v1.copy()
 # ========================================
 def init_model(args):
 
-    print('Initializing Magic')
-    model, processor = load_plava(
+    print('Initializing PLLaVA')
+    model, processor = load_pllava(
         args.pretrained_model_name_or_path, args.num_frames, 
         use_lora=args.use_lora, 
         weight_dir=args.weight_dir, 
@@ -34,7 +34,7 @@ def init_model(args):
         use_multi_gpus=args.use_multi_gpus)
     if not args.use_multi_gpus:
         model = model.to('cuda')
-    chat = ChatPlava(model, processor)
+    chat = ChatPllava(model, processor)
     return chat
 
 
@@ -153,10 +153,10 @@ def parse_args():
     return args
 
 
-title = """<h1 align="center"><a href="https://github.com/magic-research/PLaVA"><img src="https://raw.githubusercontent.com/magic-research/PLaVA/main/assert/logo.png" alt="PLAVA" border="0" style="margin: 0 auto; height: 100px;" /></a> </h1>"""
+title = """<h1 align="center"><a href="https://github.com/magic-research/PLLaVA"><img src="https://raw.githubusercontent.com/magic-research/PLLaVA/main/assert/logo.png" alt="PLLAVA" border="0" style="margin: 0 auto; height: 100px;" /></a> </h1>"""
 description = (
-    """<br><p><a href='https://github.com/magic-research/PLaVA'>
-    # PLAVA!
+    """<br><p><a href='https://github.com/magic-research/PLLaVA'>
+    # PLLAVA!
     <img src='https://img.shields.io/badge/Github-Code-blue'></a></p><p>
     - Upload A Video
     - Press Upload
@@ -174,8 +174,8 @@ model_description = f"""
 """
 
 # with gr.Blocks(title="InternVideo-VideoChat!",theme=gvlabtheme,css="#chatbot {overflow:auto; height:500px;} #InputVideo {overflow:visible; height:320px;} footer {visibility: none}") as demo:
-with gr.Blocks(title="VideoMagic",
-               theme=plava_theme,
+with gr.Blocks(title="PLLaVA",
+               theme=pllava_theme,
                css="#chatbot {overflow:auto; height:500px;} #InputVideo {overflow:visible; height:320px;} footer {visibility: none}") as demo:
     gr.Markdown(title)
     gr.Markdown(description)

@@ -5,7 +5,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from safetensors import safe_open
 from peft import PeftModel
 from tasks.eval.eval_utils import Conversation
-from models.plava import PlavaProcessor, PlavaForConditionalGeneration, PlavaConfig
+from models.pllava import PllavaProcessor, PllavaForConditionalGeneration, PllavaConfig
 from accelerate import init_empty_weights, dispatch_model, infer_auto_device_map,load_checkpoint_in_model
 from accelerate.utils import get_balanced_memory
 
@@ -36,26 +36,26 @@ class KeywordsStoppingCriteria(StoppingCriteria):
             return flag
 
 
-def load_plava(repo_id, num_frames, use_lora=False, weight_dir=None, lora_alpha=32, use_multi_gpus=False, pooling_shape=(16,12,12)):
+def load_pllava(repo_id, num_frames, use_lora=False, weight_dir=None, lora_alpha=32, use_multi_gpus=False, pooling_shape=(16,12,12)):
     kwargs = {
         'num_frames': num_frames,
     }
     # print("===============>pooling_shape", pooling_shape)
     if num_frames == 0:
         kwargs.update(pooling_shape=(0,12,12)) # produce a bug if ever usen the pooling projector
-    config = PlavaConfig.from_pretrained(
+    config = PllavaConfig.from_pretrained(
         repo_id if not use_lora else weight_dir,
         pooling_shape=pooling_shape,
         **kwargs,
     )
     
     with torch.no_grad():
-        model = PlavaForConditionalGeneration.from_pretrained(repo_id, config=config, torch_dtype=torch.bfloat16)
+        model = PllavaForConditionalGeneration.from_pretrained(repo_id, config=config, torch_dtype=torch.bfloat16)
         
     try:
-        processor = PlavaProcessor.from_pretrained(repo_id)
+        processor = PllavaProcessor.from_pretrained(repo_id)
     except Exception as e:
-        processor = PlavaProcessor.from_pretrained('llava-hf/llava-1.5-7b-hf')
+        processor = PllavaProcessor.from_pretrained('llava-hf/llava-1.5-7b-hf')
 
     # config lora
     if use_lora and weight_dir is not None:
@@ -136,8 +136,8 @@ def load_adapters(model, adapter_model_name_or_paths):
     return model
 
 
-def plava_answer(conv: Conversation, model, processor, img_list, do_sample=True, max_new_tokens=200, num_beams=1, min_length=1, top_p=0.9,
-               repetition_penalty=1.0, length_penalty=1, temperature=1.0, stop_criteria_keywords=None, print_res=False, fea_save_path=None):
+def pllava_answer(conv: Conversation, model, processor, img_list, do_sample=True, max_new_tokens=200, num_beams=1, min_length=1, top_p=0.9,
+               repetition_penalty=1.0, length_penalty=1, temperature=1.0, stop_criteria_keywords=None, print_res=False):
     # torch.cuda.empty_cache()
     prompt = conv.get_prompt()
     inputs = processor(text=prompt, images=img_list, return_tensors="pt")
@@ -152,8 +152,6 @@ def plava_answer(conv: Conversation, model, processor, img_list, do_sample=True,
         stopping_criteria= None
 
     with torch.no_grad():
-        if fea_save_path is not None:
-            inputs["fea_save_path"] = fea_save_path
         output_token = model.generate(**inputs, media_type='video',
                                       do_sample=do_sample, max_new_tokens=max_new_tokens, num_beams=num_beams, min_length=min_length, 
                                       top_p=top_p, repetition_penalty=repetition_penalty, length_penalty=length_penalty, temperature=temperature, 

@@ -20,12 +20,12 @@ from transformers.models.auto import CONFIG_MAPPING
 
 logger = logging.get_logger(__name__)
 
-PLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+PLLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "llava-hf/llava-v1.5-7b": "https://huggingface.co/llava-hf/llava-v1.5-7b/resolve/main/config.json",
 }
 
 
-class PlavaConfig(PretrainedConfig):
+class PllavaConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`LlavaForConditionalGeneration`]. It is used to instantiate an
     Llava model according to the specified arguments, defining the model architecture. Instantiating a configuration

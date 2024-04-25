@@ -34,14 +34,14 @@ from transformers.utils import (
 from transformers.models.auto import AutoModel, AutoModelForCausalLM
 import einops
 
-from .configuration_plava import PlavaConfig
+from .configuration_pllava import PllavaConfig
 import pickle
 
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlavaConfig"
 
-PLAVA_PRETRAINED_MODEL_ARCHIVE_LIST = [
+PLLAVA_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "",
     "",
     "",
@@ -51,7 +51,7 @@ PLAVA_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 @dataclass
 # Copied from transformers.models.idefics.modeling_idefics.IdeficsCausalLMOutputWithPast with Idefics->Llava
-class PlavaCausalLMOutputWithPast(ModelOutput):
+class PllavaCausalLMOutputWithPast(ModelOutput):
     """
     Base class for Llava causal language model (or autoregressive) outputs.
 
@@ -91,9 +91,9 @@ class PlavaCausalLMOutputWithPast(ModelOutput):
     attentions: Optional[Tuple[torch.FloatTensor]] = None
     image_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
 
-class PlavaMultiModalProjector(nn.Module):
+class PllavaMultiModalProjector(nn.Module):
     supported_highres = ['pad_crop_four', 'slide', ]
-    def __init__(self, config: PlavaConfig):
+    def __init__(self, config: PllavaConfig):
         super().__init__()  
         self.use_pooling = config.use_pooling
         self.frame_shape=config.frame_shape
@@ -148,7 +148,7 @@ class PlavaMultiModalProjector(nn.Module):
 
 
 
-PLAVA_START_DOCSTRING = r"""
+PLLAVA_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
@@ -167,10 +167,10 @@ PLAVA_START_DOCSTRING = r"""
 
 @add_start_docstrings(
     "The bare LLaMA Model outputting raw hidden-states without any specific head on top.",
-    PLAVA_START_DOCSTRING,
+    PLLAVA_START_DOCSTRING,
 )
-class PlavaPreTrainedModel(PreTrainedModel):
-    config_class = PlavaConfig
+class PllavaPreTrainedModel(PreTrainedModel):
+    config_class = PllavaConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
     _no_split_modules = ["LlavaVisionAttention"]
@@ -200,7 +200,7 @@ class PlavaPreTrainedModel(PreTrainedModel):
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
 
-        elif isinstance(module, PlavaMultiModalProjector):
+        elif isinstance(module, PllavaMultiModalProjector):
             # module.register_embed.data.normal_(mean=0.0, std=std)
             if self.config.register:
                 module.register_embed.data.zero_()
@@ -214,7 +214,7 @@ class PlavaPreTrainedModel(PreTrainedModel):
         return self.language_model._supports_sdpa
 
 
-PLAVA_INPUTS_DOCSTRING = r"""
+PLLAVA_INPUTS_DOCSTRING = r"""
     Args:
         input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
             Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
@@ -282,14 +282,14 @@ PLAVA_INPUTS_DOCSTRING = r"""
 
 @add_start_docstrings(
     """The LLAVA model which consists of a vision backbone and a language model.""",
-    PLAVA_START_DOCSTRING,
+    PLLAVA_START_DOCSTRING,
 )
-class PlavaForConditionalGeneration(PlavaPreTrainedModel):
-    def __init__(self, config: PlavaConfig):
+class PllavaForConditionalGeneration(PllavaPreTrainedModel):
+    def __init__(self, config: PllavaConfig):
         super().__init__(config)
         self.config = config
         self.vision_tower = AutoModel.from_config(config.vision_config)
-        self.multi_modal_projector = PlavaMultiModalProjector(config)
+        self.multi_modal_projector = PllavaMultiModalProjector(config)
         self.vocab_size = config.vocab_size
         self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=config.torch_dtype, attn_implementation="flash_attention_2")
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else self.config.text_config.pad_token_id
@@ -399,8 +399,8 @@ class PlavaForConditionalGeneration(PlavaPreTrainedModel):
 
         return final_embedding, final_attention_mask, final_labels, position_ids
 
-    @add_start_docstrings_to_model_forward(PLAVA_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=PlavaCausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
+    @add_start_docstrings_to_model_forward(PLLAVA_INPUTS_DOCSTRING)
+    @replace_return_docstrings(output_type=PllavaCausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     def forward(
         self,
         input_ids: torch.LongTensor = None,
@@ -417,7 +417,7 @@ class PlavaForConditionalGeneration(PlavaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, PlavaCausalLMOutputWithPast]:
+    ) -> Union[Tuple, PllavaCausalLMOutputWithPast]:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -558,7 +558,7 @@ class PlavaForConditionalGeneration(PlavaPreTrainedModel):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
-        return PlavaCausalLMOutputWithPast(
+        return PllavaCausalLMOutputWithPast(
             loss=loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
@@ -567,7 +567,7 @@ class PlavaForConditionalGeneration(PlavaPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, fea_save_path=None, attention_mask=None, **kwargs
+        self, input_ids, past_key_values=None, inputs_embeds=None, pixel_values=None, attention_mask=None, **kwargs
     ):
         if past_key_values is not None:
             if isinstance(past_key_values, Cache):
@@ -617,7 +617,6 @@ class PlavaForConditionalGeneration(PlavaPreTrainedModel):
                 "attention_mask": attention_mask,
                 "pixel_values": pixel_values,
                 "media_type": media_type,
-                "fea_save_path":fea_save_path,
             }
         )
         return model_inputs

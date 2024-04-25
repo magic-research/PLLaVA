@@ -37,7 +37,7 @@ inputs = dict(
 
 # ========================= model ==========================
 model = dict(
-    repo_id="llava-hf/llava-1.5-7b-hf",
+    repo_id="llava-hf/llava-v1.6-vicuna-7b-hf",
     pretrained_path=None,
     load_from_origin=False,
     origin_vision="",
@@ -70,6 +70,7 @@ preprocess = dict(
     begin_signal='',
     dataset_image_placeholder='<Image></Image>',
     dataset_video_placeholder='<Video></Video>',
+    image_token_index=32000,
     max_txt_l = "${max_txt_l}",
     ignore_index=-100, # same as torch softmax ignore index 
     center_pad=False,

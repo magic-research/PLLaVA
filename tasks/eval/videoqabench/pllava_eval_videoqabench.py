@@ -1,7 +1,6 @@
 
 import functools
 import itertools
-import json
 import logging
 from tqdm import tqdm
 from PIL import Image
@@ -19,8 +18,8 @@ import torchvision
 import transformers
 from decord import VideoReader, cpu
 
-from tasks.eval.model_utils import load_plava, plava_answer
-from tasks.eval.eval_utils import ZeroshotDectionHelper, conv_templates
+from tasks.eval.model_utils import load_pllava, pllava_answer
+from tasks.eval.eval_utils import conv_templates
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -28,13 +27,13 @@ logger.setLevel(logging.INFO)
 
 
 IMAGE_TOKEN='<image>'
-from tasks.eval.recaption import (
-    RecaptionDataset,
+from tasks.eval.videoqabench import (
+    VideoQABenchDataset,
     load_results,
     save_results,
 )
 RESOLUTION = 672 # 
-
+VIDEOQA_DATASETS=["MSVD_QA","MSRVTT_QA", "ActivityNet","TGIF_QA"]
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument(
@@ -60,6 +59,18 @@ def parse_args():
         action='store_true'
     )
     parser.add_argument(
+        "--lora_alpha",
+        type=int,
+        required=False,
+        default=32,
+    )
+    parser.add_argument(
+        "--max_new_tokens",
+        type=int,
+        required=False,
+        default=100,
+    )
+    parser.add_argument(
         "--weight_dir",
         type=str,
         required=False,
@@ -75,7 +86,7 @@ def parse_args():
         '--test_ratio',
         type=float,
         required=False,
-        default=None
+        default=1
     )
     parser.add_argument(
         "--conv_mode", 
@@ -83,25 +94,30 @@ def parse_args():
         required=False,
         default='eval_videoqabench',
     )
+    parser.add_argument(
+        "--test_datasets", 
+        type=str,
+        required=False,
+        default='MSVD_QA',
+    )
     args = parser.parse_args()
     return args
 
-def load_model_and_dataset(rank, world_size, pretrained_model_name_or_path, num_frames, use_lora, weight_dir, test_ratio):
+def load_model_and_dataset(rank, world_size, pretrained_model_name_or_path, num_frames, use_lora, lora_alpha, weight_dir, test_ratio, test_datasets):
     # remind that, once the model goes larger (30B+) may cause the memory to be heavily used up. Even Tearing Nodes.
-    model, processor = load_plava(pretrained_model_name_or_path, num_frames=num_frames, use_lora=use_lora, weight_dir=weight_dir)
+    model, processor = load_pllava(pretrained_model_name_or_path, num_frames=num_frames, use_lora=use_lora, lora_alpha=lora_alpha, weight_dir=weight_dir)
     logger.info('done loading llava')
     #  position embedding
     model = model.to(torch.device(rank))
     model = model.eval()
-    helper = ZeroshotDectionHelper(torch.device(rank))
-    dataset = RecaptionDataset(num_segments=num_frames, test_ratio=test_ratio)
-    dataset.set_rank_and_world_size(rank, world_size)
-    return model, processor, dataset, helper
 
-def infer_recaption_with_helper(
+    dataset = VideoQABenchDataset(test_ratio=test_ratio, test_datasets=test_datasets, num_segments=num_frames)
+    dataset.set_rank_and_world_size(rank, world_size)
+    return model, processor, dataset
+
+def infer_videoqabench(
         model,
         processor,
-        helper: ZeroshotDectionHelper,
         data_sample, 
         conv_mode,
         pre_query_prompt=None, # add in the head of question
@@ -109,61 +125,38 @@ def infer_recaption_with_helper(
         answer_prompt=None, # add in the begining of answer
         return_prompt=None,  # add in the begining of return message
         print_res=False,
+        max_new_tokens=100,
     ):
     video_list = data_sample["video_pils"]
     conv = conv_templates[conv_mode].copy()
-    info = data_sample['info']
-    info.update(helper.help([video_list]))
-    info_str = json.dumps(info, indent=4)
 
-    query = ("You are to assist me in accomplishing a task about the input video. Reply to me with a precise yet detailed response. For how you would succeed in the task, read the following sections and then make your response with a elaborate paragraph.\n"
-             "# Instructions\n"
-             "1. Reason about some questions about the overall video (For example, including but not limited to \"what's going on\", \"where it might be at.\", \"the main sense that the video is conveying\")\n"
-             "2. Do not take the provided information as granted. Instead, you should carefully examine the information and reason with the content in the provided video.\n"
-             "3. Completely ignore irrelevant information as the detection results and hints are noisy. If you are not sure about something, do not include it in you response. Avoid providing over detailed information such as color, counts of any objects as you are terrible regarding observing these details Also, avoid simply copying/repeating any information as the extra information is not reliable. \n"
-             "# Content\n"
-             f"```JSON\n{info_str}\n```\n"
-             "# Task\n"
-             "Describe the background, characters and the actions in the provided video.")
-
-    # query = ("You are to assist me in accomplishing a task about the input video. I will provide you with some extra information as a reference. "
-    #          "However, the information would be noisy and have certain faults in it. "
-    #          "Your job is to distinguish them from right to wrong and reply to me with a precise yet detailed response. "
-    #          "For how you would succeed in the recaptioning task, read the following Instructions section and examine the information in the Content section. "
-    #          "Finally, make your response with a elaborate paragraph.\n"
-    #          "# Instructions\n"
-    #          "1. There might be faults in the provided information. Do not take the provided information as granted.\n"
-    #          "2. Instead, you should carefully examine the information and reason with the content in the provided video.\n"
-    #          "3. Completely ignore irrelevant information as the detection results and hints are noisy.\n"
-    #          "4. Avoid simply copying any information. Carefully make up your response in a narrative tone that is precise yet detailed.\n"
-    #          "# Content\n"
-    #          f"```JSON\n{info_str}\n```\n"
-    #          "# Task\n"
-    #          "Describe the background, characters and the actions in the provided video.")
-    conv.user_query(query, pre_query_prompt, post_query_prompt, is_mm=True)
+    pre_query_prompt=conv.pre_query_prompt
+    post_query_prompt=conv.post_query_prompt
+    answer_prompt=conv.answer_prompt
+        
+    conv.user_query(data_sample['question'], pre_query_prompt, post_query_prompt, is_mm=True)
     if answer_prompt is not None:
         conv.assistant_response(answer_prompt)
 
-    llm_message, conv = plava_answer(
+    llm_message, conv = pllava_answer(
         conv=conv,
         model=model,
         processor=processor,
         img_list=video_list,
-        max_new_tokens=400,
-        num_beams=1,
+        max_new_tokens=max_new_tokens,
         do_sample=False,
-        print_res=print_res
+        print_res=print_res,
     )
-    
+        
     if answer_prompt is not None:
-        llm_message =  ''.join(llm_message.split(answer_prompt)[1:])
+        llm_message =  ''.join(llm_message.split(answer_prompt.strip("\n"))[1:]).strip()
 
     if return_prompt is not None:
         llm_message = return_prompt + llm_message
 
-    return llm_message, query
+    return llm_message
    
-def single_test(model, processor, vid_path, num_frames=4, conv_mode="video-chatgpt_v1"):
+def single_test(model, processor, vid_path, num_frames=4, conv_mode="plain"):
     def get_index(num_frames, num_segments):
         seg_size = float(num_frames - 1) / num_segments
         start = int(seg_size / 2)
@@ -198,7 +191,7 @@ def single_test(model, processor, vid_path, num_frames=4, conv_mode="video-chatg
 
     conv = conv_templates[conv_mode].copy()
     conv.user_query("Describe the video in details.", is_mm=True)
-    llm_response, conv = plava_answer(conv=conv, model=model, processor=processor, do_sample=False, img_list=img_list, max_new_tokens=256, print_res=True)
+    llm_response, conv = pllava_answer(conv=conv, model=model, processor=processor, do_sample=False, img_list=img_list, max_new_tokens=256, print_res=True)
 
 def run(rank, args, world_size):
     if rank != 0:
@@ -209,22 +202,28 @@ def run(rank, args, world_size):
     conv_mode= args.conv_mode
     pre_query_prompt = None
     post_query_prompt = None
+    # pre_query_prompt = "Answer the question with a single word or phrase."
 
     logger.info(f'loading model and constructing dataset to gpu {rank}...')
-    model, processor, dataset, helper = load_model_and_dataset(rank,
+    test_datasets = [x for x in args.test_datasets.split("-") if x in VIDEOQA_DATASETS]
+    assert len(test_datasets)>=1
+    
+    model, processor, dataset = load_model_and_dataset(rank,
                                                        world_size,
                                                        pretrained_model_name_or_path=args.pretrained_model_name_or_path,
                                                        num_frames=args.num_frames,
                                                        use_lora=args.use_lora,
+                                                       lora_alpha=args.lora_alpha,
                                                        weight_dir=args.weight_dir,
-                                                       test_ratio=args.test_ratio)
+                                                       test_ratio=args.test_ratio,
+                                                       test_datasets=test_datasets)
     logger.info(f'done model and dataset...')
     logger.info('constructing dataset...')
     logger.info('single test...')
     vid_path = "./example/yoga.mp4"
     # vid_path = "./example/jesse_dance.mp4"
     if rank == 0:
-        single_test(model, processor, vid_path, num_frames=args.num_frames)
+        single_test(model, processor, vid_path, num_frames=args.num_frames, conv_mode=args.conv_mode)
         logger.info('single test done...')
         tbar = tqdm(total=len(dataset))
     logger.info('single test...')
@@ -233,24 +232,27 @@ def run(rank, args, world_size):
     done_count = 0
     for example in dataset:
         task_type = example['task_type']
+        gt = example['answer']
         if task_type in dataset.data_list_info:
-            pred, query = infer_recaption_with_helper(
+            pred = infer_videoqabench(
                 model,
                 processor,
-                helper,
-                example,
+                example, 
                 conv_mode=conv_mode,
                 pre_query_prompt=pre_query_prompt,
                 post_query_prompt=post_query_prompt,
                 print_res=print_res,
+                max_new_tokens=args.max_new_tokens,
             )
 
-            infos = {k: v for k, v in example['sample'].items() if isinstance(v, (str, float, int))}
+            infos = {
+                'question': example['question'],
+                'video_path': example['video_path']
+            }
             res = {
                 'pred': pred,
+                'gt': gt,
                 'task_type': task_type,
-                'video_path': example['video_path'],
-                'query': query,
                 **infos    
             }
         else:
@@ -261,7 +263,7 @@ def run(rank, args, world_size):
             tbar.update(len(result_list) - done_count, )
             tbar.set_description_str(
                 f"One Chunk--Task Type: {task_type}-"
-                f"pred: {pred[:min(15, len(pred))]}......"
+                f"gt: {gt[:min(15, len(gt))]}......--pred: {pred[:min(15, len(gt))]}......"
             )
             done_count = len(result_list)
     return result_list
@@ -273,7 +275,7 @@ def main():
     save_path = args.save_path
     eval_model = args.eval_model
     logger.info(f'trying loading results from {save_path}')
-    result_list = load_results(save_path, model=args.eval_model)
+    result_list = load_results(save_path)
     
     if result_list is None:
         if multiprocess:

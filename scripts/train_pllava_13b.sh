@@ -5,7 +5,7 @@ export PYTHONPATH=${PYTHONPATH}:${which_python}
 export PYTHONPATH=${PYTHONPATH}:.
 echo "PYTHONPATH: ${PYTHONPATH}"
 
-OUTPUT_DIR=./plava_video_outputs/plava_13b
+OUTPUT_DIR=./pllava_video_outputs/pllava_13b
     
     
 pooling_shape=(16,12,12)
@@ -19,8 +19,8 @@ gradient_accumulation_steps=$[$full_batch_size/($batch_size*$num_gpus)]
 echo $batch_size
 echo $gradient_accumulation_steps
 repo_id=llava-hf/llava-v1.6-vicuna-13b-hf
-accelerate launch --main_process_port 6876 --config_file scripts/accel_config_deepspeed_zero3_offload.yaml tasks/train/train_plava_nframe_accel.py \
-    tasks/train/config_plava_nframe.py \
+accelerate launch --main_process_port 6876 --config_file scripts/accel_config_deepspeed_zero3_offload.yaml tasks/train/train_pllava_nframe_accel.py \
+    tasks/train/config_pllava_nframe.py \
     output_dir ${OUTPUT_DIR} \
     train_corpus videochat2_instruction_debug \
     save_steps $save_steps \
@@ -32,7 +32,6 @@ accelerate launch --main_process_port 6876 --config_file scripts/accel_config_de
     deepspeed True \
     model.pooling_method avg \
     model.use_lora True \
-    model.use_cc False \
     model.use_pooling True \
     model.repo_id $repo_id \
     gradient_checkpointing True \

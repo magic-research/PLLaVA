@@ -41,7 +41,7 @@ from transformers.tokenization_utils_base import PaddingStrategy, PreTokenizedIn
 from transformers.utils import TensorType
 
 
-class PlavaProcessor(ProcessorMixin):
+class PllavaProcessor(ProcessorMixin):
     r"""
     Constructs a Llava processor which wraps a Llava image processor and a Llava tokenizer into a single processor.
 

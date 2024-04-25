@@ -66,8 +66,8 @@ if __name__ == '__main__':
 
     # download models
     repo_ids = [
-        'ermu2001/plava-7b',
-        'ermu2001/plava-13b',
+        'ermu2001/pllava-7b',
+        'ermu2001/pllava-13b',
     ]
     for repo_id in repo_ids:
         local_dir = repo_id.replace('ermu2001', 'MODELS')

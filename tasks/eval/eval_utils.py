@@ -387,7 +387,7 @@ class EvalDataset(Dataset):
             self.data_list = self.data_list[rank:num_samples:world_size]
 
 
-class ChatPlava:
+class ChatPllava:
     print_res=True
     do_sample=False
     def __init__(self, model, processor):

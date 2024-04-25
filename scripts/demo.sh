@@ -1,4 +1,4 @@
-model_dir=${1:-"MODELS/plava-7b"}
+model_dir=${1:-"MODELS/pllava-7b"}
 weight_dir=${2:-"${model_dir}"}
 num_frames=16
 lora_alpha=4
@@ -9,7 +9,7 @@ echo Running DEMO On Devices: ${CUDA_VISIBLE_DEVICES}
 
 
 # # 34B Need to Use dispatch for this large.
-# CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python -m tasks.eval.demo.plava_demo \
+# CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} python -m tasks.eval.demo.pllava_demo \
 #     --pretrained_model_name_or_path ${model_dir} \
 #     --num_frames ${num_frames} \
 #     --use_lora \
@@ -20,7 +20,7 @@ echo Running DEMO On Devices: ${CUDA_VISIBLE_DEVICES}
 
 
 # 7B and 13B, There are problem if Model was split around A100 40G... Probably because some unkown bug in accelerate dispatch
-CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-"0"} python -m tasks.eval.demo.plava_demo \
+CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-"0"} python -m tasks.eval.demo.pllava_demo \
     --pretrained_model_name_or_path ${model_dir} \
     --num_frames ${num_frames} \
     --use_lora \

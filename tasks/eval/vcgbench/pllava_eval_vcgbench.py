@@ -16,7 +16,7 @@ from decord import VideoReader, cpu
 import transformers
 
 
-from tasks.eval.model_utils import load_plava, plava_answer
+from tasks.eval.model_utils import load_pllava, pllava_answer
 from tasks.eval.eval_utils import conv_templates
 from tasks.eval.vcgbench import (
     VideoChatGPTBenchDataset,
@@ -95,7 +95,7 @@ def parse_args():
 
 def load_model_and_dataset(rank, world_size, pretrained_model_name_or_path, num_frames, use_lora, lora_alpha, weight_dir, test_ratio, pooling_shape=(16,12,12)):
     # remind that, once the model goes larger (30B+) may cause the memory to be heavily used up. Even Tearing Nodes.,
-    model, processor = load_plava(pretrained_model_name_or_path, num_frames=num_frames, use_lora=use_lora, weight_dir=weight_dir, lora_alpha=lora_alpha, pooling_shape=pooling_shape)
+    model, processor = load_pllava(pretrained_model_name_or_path, num_frames=num_frames, use_lora=use_lora, weight_dir=weight_dir, lora_alpha=lora_alpha, pooling_shape=pooling_shape)
     logger.info('done loading llava')
     #  position embedding
     model = model.to(torch.device(rank))
@@ -119,7 +119,7 @@ def infer_vcgbench(
     conv.user_query(data_sample['question'], pre_query_prompt, post_query_prompt, is_mm=True)
     stop_criteria_keywords=["###","USER"]
 
-    llm_message, conv = plava_answer(
+    llm_message, conv = pllava_answer(
         conv=conv,
         model=model,
         processor=processor,
@@ -167,7 +167,7 @@ def single_test(model, processor, vid_path, num_frames=4, conv_mode="plain"):
     img_list = vid
     conv = conv_templates[conv_mode].copy()
     conv.user_query("Describe the video in details.", is_mm=True)
-    llm_response, conv = plava_answer(conv=conv, model=model, processor=processor, do_sample=False, img_list=img_list, max_new_tokens=256, print_res=True)
+    llm_response, conv = pllava_answer(conv=conv, model=model, processor=processor, do_sample=False, img_list=img_list, max_new_tokens=256, print_res=True)
 
 def run(rank, args, world_size,start_rank=0):
     if rank != 0:

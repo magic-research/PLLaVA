@@ -4,12 +4,12 @@ num_frames=16
 test_ratio=1
 
 # 13b, uses offload thus saving the full model
-model_dir=MODELS/plava-13b
-weight_dir=MODELS/plava-13b
-SAVE_DIR=test_results/test_plava_13b
+model_dir=MODELS/pllava-13b
+weight_dir=MODELS/pllava-13b
+SAVE_DIR=test_results/test_pllava_13b
 lora_alpha=4
 conv_mode=eval_vcgbench
-python -m tasks.eval.vcgbench.plava_eval_vcgbench \
+python -m tasks.eval.vcgbench.pllava_eval_vcgbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/vcgbench \
     --num_frames ${num_frames} \
@@ -21,7 +21,7 @@ python -m tasks.eval.vcgbench.plava_eval_vcgbench \
     --conv_mode ${conv_mode}
 
 conv_mode=eval_mvbench
-python -m tasks.eval.mvbench.plava_eval_mvbench \
+python -m tasks.eval.mvbench.pllava_eval_mvbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/mvbench \
     --use_lora \
@@ -32,7 +32,7 @@ python -m tasks.eval.mvbench.plava_eval_mvbench \
     --conv_mode ${conv_mode}
 
 onv_mode=eval_videoqabench
-python -m tasks.eval.videoqabench.plava_eval_videoqabench \
+python -m tasks.eval.videoqabench.pllava_eval_videoqabench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/videoqabench \
     --num_frames ${num_frames} \
@@ -44,7 +44,7 @@ python -m tasks.eval.videoqabench.plava_eval_videoqabench \
 
 
 conv_mode=eval_recaption
-python -m tasks.eval.recaption.plava_recaption \
+python -m tasks.eval.recaption.pllava_recaption \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/recaption \
     --num_frames ${num_frames} \
@@ -55,13 +55,13 @@ python -m tasks.eval.recaption.plava_recaption \
     --conv_mode ${conv_mode}
 
 
-model_dir=MODELS/plava-7b
-weight_dir=MODELS/plava-7b
-SAVE_DIR=test_results/test_plava_7b
+model_dir=MODELS/pllava-7b
+weight_dir=MODELS/pllava-7b
+SAVE_DIR=test_results/test_pllava_7b
 lora_alpha=4
 
 conv_mode=eval_vcgbench
-python -m tasks.eval.vcgbench.plava_eval_vcgbench \
+python -m tasks.eval.vcgbench.pllava_eval_vcgbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/vcgbench \
     --num_frames ${num_frames} \
@@ -73,7 +73,7 @@ python -m tasks.eval.vcgbench.plava_eval_vcgbench \
 
 
 conv_mode=eval_mvbench
-python -m tasks.eval.mvbench.plava_eval_mvbench \
+python -m tasks.eval.mvbench.pllava_eval_mvbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/mvbench \
     --use_lora \
@@ -84,7 +84,7 @@ python -m tasks.eval.mvbench.plava_eval_mvbench \
 
 
 onv_mode=eval_videoqabench
-python -m tasks.eval.videoqabench.plava_eval_videoqabench \
+python -m tasks.eval.videoqabench.pllava_eval_videoqabench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/videoqabench \
     --num_frames ${num_frames} \
@@ -94,7 +94,7 @@ python -m tasks.eval.videoqabench.plava_eval_videoqabench \
     --test_ratio ${test_ratio}
 
 conv_mode=eval_recaption
-python -m tasks.eval.recaption.plava_recaption \
+python -m tasks.eval.recaption.pllava_recaption \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/recaption \
     --num_frames ${num_frames} \

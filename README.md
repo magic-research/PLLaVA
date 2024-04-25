@@ -8,24 +8,24 @@
 [![Paper](https://img.shields.io/badge/cs.CV-2311.17005-b31b1b?logo=arxiv&logoColor=red)](https://arxiv.org/abs/2311.17005)
 [![YouTube Video](https://img.shields.io/badge/YouTube-Video-red)]()
 [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm-dark.svg)](https://huggingface.co/spaces)
-[![Model on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-sm-dark.svg)](https://huggingface.co/models)
+[![Model on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-sm-dark.svg)](https://huggingface.co/ermu2001/pllava-34b)
 
 ![](assert/logo.png)
 ## Overview
-Welcome to PLAVA!
+Welcome to PLLAVA!
 
 The primary purpose of this repository is to support research and the development of prototype models. It is designed to facilitate ease of experimentation and enable a clear overview of results. Please note that this section is currently undergoing development and reconstruction.
 
 It's important to mention that we have not optimized the response speed of the application or the frontend logic. Our goal is to maintain simplicity, clarity, and ease of development, making it accessible for both researchers and students. If you have suggestions or want to enhance the application's performance, please feel free to contact us or contribute to the project.
 
 
-We've briefly introduce our work in [PLAVA](#%EF%B8%8F-plava). For more details, feel free to read our paper. Checkout [Usage](#hammer-usage) to start using this repo. If you felt our works interesting, please star us, your support is all we want. If you find our work helpful, feel free to [cite](#page_facing_up-citation) us directly.
+We've briefly introduce our work in section [PLLAVA](#%EF%B8%8F-pllava). For more details, feel free to read our paper. Checkout section [Usage](#hammer-usage) to start using this repo. If you felt our works interesting, please star us, your support is all we want. If you find our work helpful, feel free to [cite](#page_facing_up-citation) us directly.
 
 ## :fire: Updates
 - **2024/4/24**: Release:
     - We are releasing our code/models/datasets.
 
-## 🏖️ PLAVA
+## 🏖️ PLLAVA
 ### Abstract
 Vision-language pre-training (VLP) has significantly elevated performance across a range of vision-language applications. Yet, the pre-training process for video-related tasks demands an exceptionally high degree of computational and data resources. This paper investigates a straightforward, highly efficient, and resource-light approach to adapting an existing image-language pre-training model for video data. Our preliminary experiments reveal that directly fine-tuning pre-trained image-language models with multiple frames on video datasets leads to performance saturation or even a drop in caption-related tasks. Besides, it is also vulnerable to prompts and tends to provide short descriptions. We conducted a deep analysis and observed that the performance saturation and the vulnerability might be related to the dominant patches that exist in some single video patches. We then propose a simple pooling strategy to smooth the feature distribution along the temporal dimension and thus reduce the dominant impacts from some extreme tokens. The new model is termed Pooling LLaVA, or PLLaVA in short. With the proposed pooling strategy, we achieve new state-of-the-art performance on all evaluated datasets. Notably, on the recent popular Video ChatGPT benchmark, PLLaVA achieves a score of 3.48 out of 5 on average of five evaluated dimensions, which is the new state-of-the-art score on the leaderboard and is 0.31 higher than the previous SOTA results from GPT4V (IG-VLM). On the latest multi-choice benchmark MVBench, PLLaVA achieves 58.1% accuracy on average across 20 sub-tasks, which is the new state-of-the-art result and is 14.5% higher than GPT4V (IG-VLM).
 ![](assert/module.png)
@@ -35,7 +35,7 @@ There are two dimensions for the pooling strategy: spatial dimension and the tem
 ![](assert/zeroshot.png)
 
 ### STATE-OF-THE-ART PERFORMANCE
-We compare the performance of PLAVA with recent popular methods over both question-qnswer and captioning datasets. The results are shown below.
+We compare the performance of PLLAVA with recent popular methods over both question-qnswer and captioning datasets. The results are shown below.
 
 ![](assert/performance.png)
 
@@ -50,7 +50,7 @@ This repo is built up using [transformers](https://github.com/huggingface/transf
 
 0. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment set up, we recommand creating the virtual environment with:
 ```bash
-conda create -n plava python=3.10
+conda create -n pllava python=3.10
 ``` 
 
 1. Firstly, install [pytorch](https://pytorch.org/) from the official website. The code runs on torch 2.2.1, cu118 or cu122. Select the version that suits your drive version.
@@ -80,7 +80,7 @@ The model directory should look like this, where you would only need the corresp
 ```
 $ tree MODELS
 MODELS
-|-- plava-13b
+|-- pllava-13b
 |   |-- added_tokens.json
 |   |-- config.json
 |   |-- generation_config.json
@@ -97,7 +97,7 @@ MODELS
 |   |-- tokenizer.json
 |   |-- tokenizer.model
 |   `-- tokenizer_config.json
-|-- plava-34b
+|-- pllava-34b
 |   |-- added_tokens.json
 |   |-- config.json
 |   |-- generation_config.json
@@ -124,7 +124,7 @@ MODELS
 |   |-- tokenizer.json
 |   |-- tokenizer.model
 |   `-- tokenizer_config.json
-|-- plava-7b
+|-- pllava-7b
     |-- added_tokens.json
     |-- config.json
     |-- generation_config.json
@@ -143,7 +143,7 @@ With the above steps, you should be able to proceed on with the following usages
 
 ### Run Application
 To run our models, make sure you have downloaded a model pretrained weights from the huggingface spaces. Then, run the following scripts with the corresponding path input. Since we are only training with lora and the projector, the model to be run are determined with:
-- **model_dir**: model directory, one with config.json as compatible with transformers. This refers to the base model's directory, for example "llava-hf/llava-v1.6-vicuna-7b-hf"/"ermu2001/plava-7b"/"MODELS/plava-7b". (default to: MODELS/plave-7b)
+- **model_dir**: model directory, one with config.json as compatible with transformers. This refers to the base model's directory, for example "llava-hf/llava-v1.6-vicuna-7b-hf"/"ermu2001/pllava-7b"/"MODELS/pllava-7b". (default to: MODELS/plave-7b)
 
 - **weights_dir**: your weights directory. could be the same as model_dir, but if you have a weights directory for the lora weights, you should set this weights_dir to that directory to load the lora weights. This directory should be local. Also, it would need to contain a config.json file within. (default to: ${model_dir}).
 
@@ -153,7 +153,7 @@ weights_dir="weights directory"
 bash scripts/demo.sh ${model_dir} ${weights_dir}
 ```
 
-Now checkout the application demo and try play with PLAVA!
+Now checkout the application demo and try play with PLLAVA!
 
 ### Train
 Follow the following steps to reproduce our results or train your own variant:
@@ -197,9 +197,9 @@ use_cpu: false
 Checkout out the [Accelerate](https://huggingface.co/docs/accelerate/index) documents for more details.
 
 ##### Overwatch the training configuration
-Next, you should go over a basic training configuration of the training process in [here](tasks/train/config_magic_nframe.py). Then passing this file as the first arg to the training script would utilize every arguments in the file. You can customize some of the hyper parameters for your own training process by passing them in the format of "key" "value" pair in the following arguments. A example training scripts could be find [here](scripts/train_plava.sh). 
+Next, you should go over a basic training configuration of the training process in [here](tasks/train/config_magic_nframe.py). Then passing this file as the first arg to the training script would utilize every arguments in the file. You can customize some of the hyper parameters for your own training process by passing them in the format of "key" "value" pair in the following arguments. A example training scripts could be find [here](scripts/train_pllava.sh). 
 
-The code of configuration is mostly based on the original [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2) codebase. Salute to those fantastic researchers & engineers. Checkout the used [configuration](tasks/train/config_plava_nframe.py) to set up a customized training!
+The code of configuration is mostly based on the original [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2) codebase. Salute to those fantastic researchers & engineers. Checkout the used [configuration](tasks/train/config_pllava_nframe.py) to set up a customized training!
 
 With the above steps, you would be able to start the training process. The output would be well organized in the output directory, each a qualified model directory to pass in to demo as weights_dir, since we are only saveing the lora weights and projector weights to avoide redundancy.
 

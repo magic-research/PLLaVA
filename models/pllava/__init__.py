@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from transformers.utils import OptionalDependencyNotAvailable, _LazyModule, is_torch_available
 
 
-_import_structure = {"configuration_plava": ["PLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP", "PlavaConfig"]}
+_import_structure = {"configuration_pllava": ["PLLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP", "PllavaConfig"]}
 
 try:
     if not is_torch_available():
@@ -24,16 +24,16 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["modeling_plava"] = [
-        "PLAVA_PRETRAINED_MODEL_ARCHIVE_LIST",
-        "PlavaForConditionalGeneration",
-        "PlavaPreTrainedModel",
+    _import_structure["modeling_pllava"] = [
+        "PLLAVA_PRETRAINED_MODEL_ARCHIVE_LIST",
+        "PllavaForConditionalGeneration",
+        "PllavaPreTrainedModel",
     ]
-    _import_structure["processing_plava"] = ["PlavaProcessor"]
+    _import_structure["processing_pllava"] = ["PllavaProcessor"]
 
 
 if TYPE_CHECKING:
-    from .configuration_plava import PLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP, PlavaConfig
+    from .configuration_pllava import PLLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP, PllavaConfig
 
     try:
         if not is_torch_available():
@@ -41,12 +41,12 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_plava import (
-            PLAVA_PRETRAINED_MODEL_ARCHIVE_LIST,
-            PlavaForConditionalGeneration,
-            PlavaPreTrainedModel,
+        from .modeling_pllava import (
+            PLLAVA_PRETRAINED_MODEL_ARCHIVE_LIST,
+            PllavaForConditionalGeneration,
+            PllavaPreTrainedModel,
         )
-        from .processing_plava import PlavaProcessor
+        from .processing_pllava import PllavaProcessor
 
 
 else:

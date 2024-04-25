@@ -11,7 +11,7 @@ from tasks.eval.recaption import load_results as load_results_recaption
 from tasks.eval.mvbench import load_results as load_results_mvbench
 from tasks.eval.vcgbench import load_results as load_results_vcgbench
 from tasks.eval.videoqabench import load_results as load_results_videoqabench
-from tasks.eval.demo import plava_theme
+from tasks.eval.demo import pllava_theme
 
 
 load_results_funcs = [
@@ -84,7 +84,7 @@ def reload_results(result_dir):
 
 
 
-with gr.Blocks(title="PLAVA RESULTS", theme=plava_theme) as demo:
+with gr.Blocks(title="PLLAVA RESULTS", theme=pllava_theme) as demo:
     result_list_first = gr.State()
     result_list_second = gr.State()
 

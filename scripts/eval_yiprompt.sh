@@ -5,11 +5,11 @@ test_ratio=200
 
 # 13b, uses offload thus saving the full model
 model_dir=llava-hf/llava-v1.6-34b-hf
-weight_dir=MODELS/plava-13b
-SAVE_DIR=test_results/test_plava_13b
+weight_dir=MODELS/pllava-13b
+SAVE_DIR=test_results/test_pllava_13b
 lora_alpha=4
 conv_mode=eval_vcg_llavanext
-python -m tasks.eval.vcgbench.plava_eval_vcgbench \
+python -m tasks.eval.vcgbench.pllava_eval_vcgbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/vcgbench \
     --num_frames ${num_frames} \
@@ -21,7 +21,7 @@ python -m tasks.eval.vcgbench.plava_eval_vcgbench \
     --conv_mode $conv_mode
 
 conv_mode=eval_mvbench_llavanext
-python -m tasks.eval.mvbench.plava_eval_mvbench \
+python -m tasks.eval.mvbench.pllava_eval_mvbench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/mvbench \
     --use_lora \
@@ -32,7 +32,7 @@ python -m tasks.eval.mvbench.plava_eval_mvbench \
     --conv_mode $conv_mode
 
 conv_mode=eval_videoqa_llavanext
-python -m tasks.eval.videoqabench.plava_eval_videoqabench \
+python -m tasks.eval.videoqabench.pllava_eval_videoqabench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/videoqabench \
     --num_frames ${num_frames} \
@@ -43,7 +43,7 @@ python -m tasks.eval.videoqabench.plava_eval_videoqabench \
     --conv_mode ${conv_mode}
 
 conv_mode=eval_recaption_llavanext
-python -m tasks.eval.recaption.plava_recaption \
+python -m tasks.eval.recaption.pllava_recaption \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/recaption \
     --num_frames ${num_frames} \

@@ -36,7 +36,7 @@ from transformers import  (
     AutoModel,
     AutoModelForCausalLM
     )
-from models.plava import PlavaConfig, PlavaForConditionalGeneration, PlavaProcessor
+from models.pllava import PllavaConfig, PllavaForConditionalGeneration, PllavaProcessor
 
 # logger = logging.getLogger(__name__)
 IMAGE_TOKEN='<image>'
@@ -91,13 +91,13 @@ def setup_model(
         torch_dtype = config.model.torch_dtype
     logger.info("Creating model")
     
-    processor = PlavaProcessor.from_pretrained(config.model.repo_id, 
+    processor = PllavaProcessor.from_pretrained(config.model.repo_id, 
                                                padding_side='right', 
                                                center_pad=config.preprocess.center_pad,
                                                )
     
 
-    model_config = PlavaConfig.from_pretrained(config.model.repo_id,
+    model_config = PllavaConfig.from_pretrained(config.model.repo_id,
                                                torch_dtype=torch_dtype, 
                                                num_frames=config.model.num_frames,
                                                pooling_method=config.model.pooling_method,
@@ -109,7 +109,7 @@ def setup_model(
                                                )
     print("====>gradient_checkpointing",model_config.gradient_checkpointing)
 
-    model = PlavaForConditionalGeneration.from_pretrained(config.model.repo_id, config=model_config, torch_dtype=torch_dtype)
+    model = PllavaForConditionalGeneration.from_pretrained(config.model.repo_id, config=model_config, torch_dtype=torch_dtype)
 
     if config.model.load_from_origin:
         with torch.no_grad():
@@ -399,7 +399,7 @@ def main(config):
     
 
     # TensorBoard cannot log Enums, need the raw value
-    accelerator.init_trackers("train_plava_nframe", experiment_config)
+    accelerator.init_trackers("train_pllava_nframe", experiment_config)
     start_time = time.time()
     
 

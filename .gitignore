@@ -63,4 +63,4 @@ test_training
 test_hdfs.py
 magic_video_outputs/llava*
 magic_video_outputs
-plava_video_outputs/
+pllava_video_outputs/
