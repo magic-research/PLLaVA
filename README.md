@@ -44,27 +44,32 @@ This section provides guidance on how to run, train, and evaluate our models.
 
 
 ### Install
-First you will need to set up the environment, and download some pretrained weights.
+First you will need to set up the environment, and download some pretrained weights. 
 
 This repo is built up using [transformers](https://github.com/huggingface/transformers) for model construction along with [accelerate](https://github.com/huggingface/transformers) for distributed training. Follow the instruction to install the needed environment.
 
-1. Firstly, install [pytorch](https://pytorch.org/) from the official website. The code runs on torch 2.2.*, cu118 or cu122. Select the version that suits your drive version.
+0. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment set up, we recommand creating the virtual environment with:
+```bash
+conda create -n plava python=3.10
+``` 
+
+1. Firstly, install [pytorch](https://pytorch.org/) from the official website. The code runs on torch 2.2.1, cu118 or cu122. Select the version that suits your drive version.
 ```
 torch                       2.2.1+cu118
 torchaudio                  2.2.1+cu118
 torchvision                 0.17.1+cu118
 ```
-If your driver version is cu116, you could probably try installing with the follow scripts:
+
+If your driver version higher than cu121, you could probably try installing with the follow scripts:
 ```bash
 pip install -r requirements.txt
 ```
 
-Otherwise, you would need to install torch for your server first, then install the others:
+Otherwise, you would need to install torch for your server first, then install the other packages:
 ```bash
-pip install -r requirements.torch.txt # decide your own requirements, or install torch directly following the official website.
+pip install -r requirements.torch.txt # decide your own requirements, (this is for cu11), or install torch directly following the official website.
 pip install -r requirements.no_torch.txt # install the following
 ```
-We recommend using torch 2.2.1+cu118 or torch 2.2.1+cu122.
 
 2. Prepare the model.
 We prefer to have huggingface models explicitly download to a MODELS directory. However, if you are familiar with huggingface-hub usage, feel free to organize the model yourself.
@@ -134,19 +139,20 @@ MODELS
     |-- tokenizer.model
     `-- tokenizer_config.json
 ```
-
-
-With the above steps, you should be able to proceed on the following usages.
+With the above steps, you should be able to proceed on with the following usages.
 
 ### Run Application
-To run our models, make sure you have downloaded a model pretrained weights from the huggingface spaces. Then, run the following scripts with the corresponding path input.
-- model_dir: your model directory, one with config.json as compatible with transformers
-- weights_dir: your weights directory. could be the same as model_dir, but if you have a weights directory for the lora weights, you should set this weights_dir to that directory to load the lora weights. Also, it would need to contain a config.json file under.
-```
-model_dir="your model directory"
-weights_dir="your weights directory (Could be the same as model_dir, but if you have a weights directory for the lora weights, this weights_dir should point to that directory to load the lora weights)"
+To run our models, make sure you have downloaded a model pretrained weights from the huggingface spaces. Then, run the following scripts with the corresponding path input. Since we are only training with lora and the projector, the model to be run are determined with:
+- **model_dir**: model directory, one with config.json as compatible with transformers. This refers to the base model's directory, for example "llava-hf/llava-v1.6-vicuna-7b-hf"/"ermu2001/plava-7b"/"MODELS/plava-7b". (default to: MODELS/plave-7b)
+
+- **weights_dir**: your weights directory. could be the same as model_dir, but if you have a weights directory for the lora weights, you should set this weights_dir to that directory to load the lora weights. This directory should be local. Also, it would need to contain a config.json file within. (default to: ${model_dir}).
+
+```bash
+model_dir="model directory"
+weights_dir="weights directory"
 bash scripts/demo.sh ${model_dir} ${weights_dir}
 ```
+
 Now checkout the application demo and try play with PLAVA!
 
 ### Train
@@ -201,41 +207,41 @@ With the above steps, you would be able to start the training process. The outpu
 This section mainly introduce how to reproduce the evaluation or evaluate your own model.
 
 #### Set up Evaluation Data
-Make sure you set up the "DATAS" directory as in [TODO](), then you would be able to run the inference with fortune! The evaluation data directory of DATAS would look like: 
+Make sure you set up the "DATAS" directory as in [DATAS.md](DATAS.md), then you would be able to run the inference with fortune! The evaluation data directory of DATAS would look like: 
 ```
 DATAS/:
-      TGIF_FrameQA.csv
 DATAS/VideoQA:
 DATAS/VideoQA/TGIF_QA:
                      test_a.json
+                     test_q.json
 DATAS/VideoQA/TGIF_QA/videos:
                             tumblr_m4387mGrlc1r6m5e8o1_250.gif
+                            ...
 DATAS/VideoQA/TGIF_QA/videos_mp4:
                                 tumblr_m4387mGrlc1r6m5e8o1_250.mp4
+                                ...
 DATAS/VideoQA/TGIF_QA/video_gif:
                                tumblr_m4387mGrlc1r6m5e8o1_250.gif
+                               ...
 DATAS/VideoQA/MSVD_Zero_Shot_QA:
-                               raw-captions.pkl
+                               test_a.json
+                               test_q.json
 DATAS/VideoQA/MSVD_Zero_Shot_QA/videos:
                                       -4wsuPCjDBc_5_15.avi
 DATAS/VideoQA/MSVD_Zero_Shot_QA/msvd_qa:
-                                       test.jsonl
 DATAS/VideoQA/ActivityNet:
                          test_a.json
+                         test_q.json
 DATAS/VideoQA/ActivityNet/all_test:
                                   v_--tFD65KaK4.mp4
-DATAS/VideoQA/ActivityNet/all_test/v_Fvm9BuMz0yE.mp4:
-DATAS/VideoQA/ActivityNet/all_test/v_Fvm9BuMz0yE.mp4/all_test:
-                                                             v_10fX73-AXcg.mp4
+                                  ...
 DATAS/VideoQA/MSRVTT_Zero_Shot_QA:
-                                 MSRVTT_JSFUSION_test.csv
+                                 test_a.json
+                                 test_q.json
 DATAS/VideoQA/MSRVTT_Zero_Shot_QA/videos:
-                                        test_list_new.txt
 DATAS/VideoQA/MSRVTT_Zero_Shot_QA/videos/all:
                                             video0.mp4
-DATAS/VideoQA/MSRVTT_Zero_Shot_QA/videos/all/images:
-DATAS/VideoQA/MSRVTT_Zero_Shot_QA/msrvtt_qa:
-                                           test.jsonl
+                                            ...
 
 DATAS/MVBench:
              ...
@@ -245,6 +251,7 @@ DATAS/Recaption/Inter4K:
 DATAS/Recaption/Inter4K/60fps:
 DATAS/Recaption/Inter4K/60fps/UHD:
                                  1.mp4
+                                 ...
 
 ```
 
@@ -277,4 +284,4 @@ We would also like to recognize and commend the following open source projects, 
 
 - [LLaVA](https://github.com/haotian-liu/LLaVA): Fantastic Open Source Vision LLM Model. 
 - [VideoChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT/tree/main): Great Evaluation Benchmarking Framework.
-
+- [VideoLlava](https://github.com/PKU-YuanGroup/Video-LLaVA/tree/main/videollava)
