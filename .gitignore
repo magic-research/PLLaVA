@@ -1,0 +1,66 @@
+# local #
+tmp*/
+cache/*
+*/cache*/
+tmp*.py
+tmp*
+*pickle
+data/
+
+# Zip Files/Packages #
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+*.log
+*.sql
+*.sqlite
+.ipynb_checkpoints/
+*.swp
+*.vscode/
+*.idea/
+*.pyc
+__pycache__
+slurm*out
+
+# OS files #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+
+.vim-arsync
+scratch.norg
+sync_to_red.sh
+
+anno/
+wandb/
+logs/
+accelerate_config/
+*.pth
+hf_*
+
+# local folders
+MODELS
+DATAS
+SAVED
+EXPERIMENTS
+REMOTE_HF
+TEST
+
+test_results
+test_training
+test_hdfs.py
+magic_video_outputs/llava*
+magic_video_outputs
+plava_video_outputs/
