@@ -10,6 +10,8 @@
 [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm-dark.svg)](https://huggingface.co/spaces)
 [![Model on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-sm-dark.svg)](https://huggingface.co/ermu2001/pllava-34b)
 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/pllava-parameter-free-llava-extension-from/video-based-generative-performance-1)](https://paperswithcode.com/sota/video-based-generative-performance-1?p=pllava-parameter-free-llava-extension-from)
+
 ![](assert/logo.png)
 ## Overview
 Welcome to PLLAVA!
