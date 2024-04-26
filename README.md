@@ -7,7 +7,8 @@
 
 <!-- [![Paper](https://img.shields.io/badge/cs.CV-2311.17005-b31b1b?logo=arxiv&logoColor=red)](https://arxiv.org/abs/2311.17005) -->
 
-[![arXiv](https://img.shields.io/badge/arXiv-2402.09368-b31b1b.svg)]([https://arxiv.org/abs/2402.09368](https://github.com/magic-research/PLLaVA/blob/main/docs/PoolLLaVA_Report.pdf))
+
+[![arXiv](https://img.shields.io/badge/arXiv-2402.09368-b31b1b.svg)](https://github.com/magic-research/PLLaVA/blob/main/docs/PoolLLaVA_Report.pdf)
 [![YouTube Video](https://img.shields.io/badge/YouTube-Video-red)](https://www.youtube.com/watch?v=nAEje8tu18U)
 <!-- [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm-dark.svg)](https://huggingface.co/spaces) -->
 [![Model on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-sm-dark.svg)](https://huggingface.co/ermu2001/pllava-34b)
