@@ -1,6 +1,6 @@
 <div align="center">
 
-<h2><a href="https://pllava.github.io/">PLLaVA : Parameter-free LLaVA Extension from Images to Videos for Video Dense Captioning</a></h2>
+<h2><a href="https://pllava.github.io/">PLLaVA: Parameter-free LLaVA Extension from Images to Videos for Video Dense Captioning</a></h2>
 
 [Lin Xu](https://scholar.google.com/citations?user=_Gu69coAAAAJ), [Yilin Zhao](https://ermu2001.github.io/me.io/), [Daquan Zhou](https://scholar.google.com/citations?user=DdCAbWwAAAAJ), [Zhijie Lin](https://scholar.google.com/citations?user=xXMj6_EAAAAJ), [See-Kiong Ng](https://scholar.google.com/citations?user=_wsommYAAAAJ), [Jiashi Feng](https://scholar.google.com.sg/citations?user=Q8iay0gAAAAJ&hl=en)
 </div>
@@ -38,7 +38,7 @@ The primary purpose of this repository is to support research and the developmen
 It's important to mention that we have not optimized the response speed of the application or the frontend logic. Our goal is to maintain simplicity, clarity, and ease of development, making it accessible for both researchers and students. If you have suggestions or want to enhance the application's performance, please feel free to contact us or contribute to the project.
 
 
-We've briefly introduce our work in section [PLLAVA](#%EF%B8%8F-pllava). For more details, feel free to read our paper. Checkout section [Usage](#hammer-usage) to start using this repo. If you felt our works interesting, please star us, your support is all we want. If you find our work helpful, feel free to [cite](#page_facing_up-citation) us directly.
+We've briefly introduced our work in section [PLLAVA](#%EF%B8%8F-pllava). For more details, feel free to read our paper. Check out section [Usage](#hammer-usage) to start using this repo. If you felt our works is interesting, please star us, your support is all we want. If you find our work helpful, feel free to [cite](#page_facing_up-citation) us directly.
 
 ## :fire: Updates
 - **2024/4/24**: Release:
@@ -49,13 +49,13 @@ We've briefly introduce our work in section [PLLAVA](#%EF%B8%8F-pllava). For mor
 ### Abstract
 Vision-language pre-training (VLP) has significantly elevated performance across a range of vision-language applications. Yet, the pre-training process for video-related tasks demands an exceptionally high degree of computational and data resources. This paper investigates a straightforward, highly efficient, and resource-light approach to adapting an existing image-language pre-training model for video data. Our preliminary experiments reveal that directly fine-tuning pre-trained image-language models with multiple frames on video datasets leads to performance saturation or even a drop in caption-related tasks. Besides, it is also vulnerable to prompts and tends to provide short descriptions. We conducted a deep analysis and observed that the performance saturation and the vulnerability might be related to the dominant patches that exist in some single video patches. We then propose a simple pooling strategy to smooth the feature distribution along the temporal dimension and thus reduce the dominant impacts from some extreme tokens. The new model is termed Pooling LLaVA, or PLLaVA in short. With the proposed pooling strategy, we achieve new state-of-the-art performance on all evaluated datasets. Notably, on the recent popular Video ChatGPT benchmark, PLLaVA achieves a score of 3.48 out of 5 on average of five evaluated dimensions, which is the new state-of-the-art score on the leaderboard and is 0.31 higher than the previous SOTA results from GPT4V (IG-VLM). On the latest multi-choice benchmark MVBench, PLLaVA achieves 58.1% accuracy on average across 20 sub-tasks, which is the new state-of-the-art result and is 14.5% higher than GPT4V (IG-VLM).
 ![](assert/module.png)
-### SEARCHING FOR OPTILAL POOLING STRATEGY
-There are two dimensions for the pooling strategy: spatial dimension and the temporal dimension. We emperically found that reducing the spatial dimension with larger temporal dimension could lead to better model perfromance, compared to reducing the temporal dimension directly.
+### SEARCHING FOR OPTIMAL POOLING STRATEGY
+There are two dimensions for the pooling strategy: the spatial dimension and the temporal dimension. We empirically found that reducing the spatial dimension with a larger temporal dimension could lead to better model performance, compared to reducing the temporal dimension directly.
 
 ![](assert/zeroshot.png)
 
 ### STATE-OF-THE-ART PERFORMANCE
-We compare the performance of PLLAVA with recent popular methods over both question-qnswer and captioning datasets. The results are shown below.
+We compare the performance of PLLAVA with recent popular methods over both question-answer and captioning datasets. The results are shown below.
 
 ![](assert/performance.png)
 
@@ -64,11 +64,11 @@ This section provides guidance on how to run, train, and evaluate our models.
 
 
 ### Install
-First you will need to set up the environment, and download some pretrained weights. 
+First, you will need to set up the environment and download some pre-trained weights. 
 
-This repo is built up using [transformers](https://github.com/huggingface/transformers) for model construction along with [accelerate](https://github.com/huggingface/accelerate) for distributed training. Follow the instruction to install the needed environment.
+This repo is built up using [transformers](https://github.com/huggingface/transformers) for model construction along with [accelerate](https://github.com/huggingface/accelerate) for distributed training. Follow the instructions to install the needed environment.
 
-0. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment set up, we recommand creating the virtual environment with:
+0. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment setup, we recommend creating the virtual environment with:
 ```bash
 conda create -n pllava python=3.10
 ``` 
@@ -80,19 +80,19 @@ torchaudio                  2.2.1+cu118
 torchvision                 0.17.1+cu118
 ```
 
-If your driver version higher than cu121, you could probably try installing with the follow scripts:
+If your driver version is higher than cu121, you could probably try installing with the following scripts:
 ```bash
 pip install -r requirements.txt
 ```
 
-Otherwise, you would need to install torch for your server first, then install the other packages:
+Otherwise, you would need to install a torch for your server first, then install the other packages:
 ```bash
 pip install -r requirements.torch.txt # decide your own requirements, (this is for cu11), or install torch directly following the official website.
 pip install -r requirements.no_torch.txt # install the following
 ```
 
 2. Prepare the model.
-We prefer to have huggingface models explicitly download to a MODELS directory. However, if you are familiar with huggingface-hub usage, feel free to organize the model yourself.
+We prefer to have huggingface models explicitly downloaded to a MODELS directory. However, if you are familiar with huggingface-hub usage, feel free to organize the model yourself.
 ```
 python python_scripts/hf.py
 ```
