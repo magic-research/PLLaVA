@@ -56,6 +56,7 @@ There are two dimensions for the pooling strategy: spatial dimension and the tem
 
 ### STATE-OF-THE-ART PERFORMANCE
 We compare the performance of PLLAVA with recent popular methods over both question-qnswer and captioning datasets. The results are shown below.
+
 ![](assert/performance.png)
 
 ## :hammer: Usage
