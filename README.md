@@ -185,7 +185,7 @@ Now checkout the application demo and try play with PLLAVA!
 Follow the following steps to reproduce our results or train your own variant:
 
 #### 1. Data Preparation
-To train our model from a starting Image-aligned Vision LLM, you would need to download the data first. Our data set up is mainly based on the original Videochat2's training data. Checkout [Instruction Data](./DATA.md) to prepare the instruction training data. Ideally, setting up a root data directory and alter the code here [](./tasks/train/instruction_data.py#6) would accomodate the data for training most smoothly.
+To train our model from a starting Image-aligned Vision LLM, you would need to download the data first. Our data set up is mainly based on the original Videochat2's training data. Checkout [Instruction Data](./DATA.md) to prepare the instruction training data. Ideally, setting up a root data directory and alter the code here [](./tasks/train/instruction_data.py#6) would accommodate the data for training most smoothly.
 
 #### 2. Start Training
 Now you're only a few step away from starting the training. Follow the instructions:
