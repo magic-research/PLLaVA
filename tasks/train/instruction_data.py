@@ -2,7 +2,6 @@ import os as __os  # add "__" if not want to be exported
 from copy import deepcopy as __deepcopy
 import itertools as __itertools
 
-# data_root = "/mnt/bn/dq-storage-ckpt/xulin/datasets"
 data_root = "DATAS/TRAIN_TEST"
 anno_root_it = f"{data_root}/magic_jsons"
 

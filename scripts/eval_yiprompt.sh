@@ -3,10 +3,9 @@ export OPENAI_API_KEY=...
 num_frames=16
 test_ratio=200
 
-# 13b, uses offload thus saving the full model
-model_dir=llava-hf/llava-v1.6-34b-hf
-weight_dir=MODELS/pllava-13b
-SAVE_DIR=test_results/test_pllava_13b
+model_dir=MODELS/pllava-34b
+weight_dir=MODELS/pllava-34b
+SAVE_DIR=test_results/test_pllava_34b
 lora_alpha=4
 conv_mode=eval_vcg_llavanext
 python -m tasks.eval.vcgbench.pllava_eval_vcgbench \
