@@ -340,6 +340,12 @@ bash scripts/gallery.sh
 
 Feel free to use the compare version to compare differnt models' results or use the single gallery version to check out one model's results. They are basically the same. Check out this [script](scripts/gallery.sh) for more details
 
+#### For Captioning and Recaptioning
+Follow instructions at [DATA.md](DATA.md#extending-reacptioning) and you can extend the recaptioning data with a few steps.
+
+Feel free to point out high quality dataset of videos, we would proceed on doing captioning on those datasets.
+
+
 # :page_facing_up: Citation
 
 If you find this project useful in your research, please consider cite:
