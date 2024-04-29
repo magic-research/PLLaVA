@@ -35,8 +35,12 @@
 </div>
 
 <div align="center">
-  <video src="https://github.com/magic-research/PLLaVA/assets/55656210/e6a228e1-9973-4f4f-b439-5e5089ebd285" width="100%">
+  <video src="https://github.com/magic-research/PLLaVA/assets/55656210/a6619702-12d3-489d-bfcc-0ef7105544b2" width="100%">
 </div>
+
+
+
+
 
 
 ## Overview
