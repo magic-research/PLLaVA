@@ -35,7 +35,7 @@
 </div>
 
 <div align="center">
-https://github.com/magic-research/PLLaVA/assets/55656210/e6a228e1-9973-4f4f-b439-5e5089ebd285
+  <video src="https://github.com/magic-research/PLLaVA/assets/55656210/e6a228e1-9973-4f4f-b439-5e5089ebd285" width="100%">
 </div>
 
 
