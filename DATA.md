@@ -1,13 +1,36 @@
 # Data
 ## Instruction Training Data
-> *originated from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2)*
->
-> [![Dataset meta](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-VideoChat2%20IT-blue)](https://huggingface.co/datasets/OpenGVLab/VideoChat2-IT) 
->
-> ![images](./assert/data.png)
+<!-- > *originated from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2)* -->
 
 
-We leveraged the training data from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). We only used the video part for video instruct tuning.
+For training, we leveraged the video instruction tuning data from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). 
+
+#### 1. Download json annotation files from huggingface. 
+[![Dataset meta](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-VideoChat2%20IT-blue)](https://huggingface.co/datasets/OpenGVLab/VideoChat2-IT) 
+
+<!-- > ![images](./assert/data.png) -->
+
+#### 2. Download the raw videos from the following links.
+The video directories can be found in tasks/train/instruction_data.py. You can also change them to your own saved paths.
+
+- [VideoChat](https://github.com/OpenGVLab/InternVideo/tree/main/Data/instruction_data): Based on [InternVid](https://github.com/OpenGVLab/InternVideo/tree/main/Data/InternVid), download the processed version directly [here](https://pjlab-gvm-data.oss-cn-shanghai.aliyuncs.com/videochat2/data/videochat2_conversation_videos.zip)
+- [VideoChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT/tree/main/data)
+- [Kinetics-710](https://github.com/OpenGVLab/UniFormerV2/blob/main/DATASET.md), download Kinetics 400/600/700 [here](https://openxlab.org.cn/datasets?keywords=kinetics).
+- [SthSthV2](https://developer.qualcomm.com/software/ai-datasets/something-something): Option candidates were generated from [UMT](https://github.com/OpenGVLab/unmasked_teacher) top-20 predictions.
+- [NExTQA](https://github.com/doc-doc/NExT-QA)
+- [CLEVRER](https://clevrer.csail.mit.edu/)
+- [WebVid](https://maxbain.com/webvid-dataset/)
+- [YouCook2](https://youcook2.eecs.umich.edu/), download the processed version [here](https://pjlab-gvm-data.oss-cn-shanghai.aliyuncs.com/videochat2/data/youcook_split_videos.zip).
+- [TextVR](https://github.com/callsys/textvr)
+- [TGIF](https://github.com/YunseokJANG/tgif-qa)
+- [EgoQA](https://ego4d-data.org/), download the processed version [here](https://pjlab-gvm-data.oss-cn-shanghai.aliyuncs.com/videochat2/data/egoqa_split_videos.zip).
+
+#### 3. We also provide our processed json annotation files here.
+
+[![Dataset meta](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-magic%5Fjsons-blue)](https://huggingface.co/datasets/cathyxl/magic_jsons) 
+
+
+<!-- We leveraged the training data from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). We only used the video part for video instruct tuning. -->
 
 ## Evaluation Data & Others
 Follow this section to obtain the evaluation open resources.

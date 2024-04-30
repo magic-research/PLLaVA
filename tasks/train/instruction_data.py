@@ -8,90 +8,90 @@ anno_root_it = f"{data_root}/magic_jsons"
 # ============== pretraining datasets=================
 available_corpus = dict(
     # image
-    caption_coco=[
-        f"{anno_root_it}/image/caption/coco/train.json", 
-        f"{data_root}/images/coco",
-    ],
-    caption_llava=[
-        f"{anno_root_it}/image/caption/llava/train.json", 
-        f"{data_root}/images/coco",
-    ],
-    caption_minigpt4=[
-        f"{anno_root_it}/image/caption/minigpt4/train.json", 
-        f"{data_root}/images/minigpt4_align/image",
-    ],
-    caption_paragraph_captioning=[
-        f"{anno_root_it}/image/caption/paragraph_captioning/train.json", 
-        f"{data_root}/images/m3it/image-paragraph-captioning",
-    ],
-    caption_textcaps=[
-        f"{anno_root_it}/image/caption/textcaps/train.json", 
-        f"{data_root}/images/textcaps",
-    ],
-    classification_imagenet=[
-        f"{anno_root_it}/image/classification/imagenet/train.json", 
-        f"{data_root}/images/m3it/imagenet",
-    ],
-    classification_coco_itm=[
-        f"{anno_root_it}/image/classification/coco_itm/train.json", 
-        f"{data_root}/images/coco",
-    ],
-    conversation_llava=[
-        f"{anno_root_it}/image/conversation/llava/train.json", 
-        f"{data_root}/images/coco",
-    ],
-    reasoning_clevr=[
-        f"{anno_root_it}/image/reasoning/clevr/train.json", 
-        f"{data_root}/images/m3it/clevr",
-    ],
-    reasoning_visual_mrc=[
-        f"{anno_root_it}/image/reasoning/visual_mrc/train.json", 
-        f"{data_root}/images/m3it/visual_mrc",
-    ],
-    reasoning_llava=[
-        f"{anno_root_it}/image/reasoning/llava/train.json", 
-        f"{data_root}/images/coco",
-    ],
-    vqa_vqav2=[
-        f"{anno_root_it}/image/vqa/vqav2/train.json", 
-        f"{data_root}/images/m3it/vqav2",
-    ],
-    vqa_gqa=[
-        f"{anno_root_it}/image/vqa/gqa/train.json", 
-        f"{data_root}/images/gqa/images",
-    ],
-    vqa_okvqa=[
-        f"{anno_root_it}/image/vqa/okvqa/train.json", 
-        f"{data_root}/images/m3it/okvqa",
-    ],
-    vqa_a_okvqa=[
-        f"{anno_root_it}/image/vqa/a_okvqa/train.json", 
-        f"{data_root}/images/m3it/a_okvqa",
-    ],
-    vqa_viquae=[
-        f"{anno_root_it}/image/vqa/viquae/train.json", 
-        f"{data_root}/images/viquae_images",
-    ],
-    vqa_ocr_vqa=[
-        f"{anno_root_it}/image/vqa/ocr_vqa/train.json", 
-        f"{data_root}/images/ocr_vqa/images",
-    ],
-    vqa_text_vqa=[
-        f"{anno_root_it}/image/vqa/text_vqa/train.json", 
-        f"{data_root}/images/textvqa",
-    ],
-    vqa_st_vqa=[
-        f"{anno_root_it}/image/vqa/st_vqa/train.json", 
-        f"{data_root}/images/m3it/st-vqa",
-    ],
-    vqa_docvqa=[
-        f"{anno_root_it}/image/vqa/docvqa/train.json", 
-        f"{data_root}/images/docvqa",
-    ],
-    origin_llava=[
-        f"{anno_root_it}/image/origin_llava/train.json", 
-        f"{data_root}/images",
-    ],
+    # caption_coco=[
+    #     f"{anno_root_it}/image/caption/coco/train.json", 
+    #     f"{data_root}/images/coco",
+    # ],
+    # caption_llava=[
+    #     f"{anno_root_it}/image/caption/llava/train.json", 
+    #     f"{data_root}/images/coco",
+    # ],
+    # caption_minigpt4=[
+    #     f"{anno_root_it}/image/caption/minigpt4/train.json", 
+    #     f"{data_root}/images/minigpt4_align/image",
+    # ],
+    # caption_paragraph_captioning=[
+    #     f"{anno_root_it}/image/caption/paragraph_captioning/train.json", 
+    #     f"{data_root}/images/m3it/image-paragraph-captioning",
+    # ],
+    # caption_textcaps=[
+    #     f"{anno_root_it}/image/caption/textcaps/train.json", 
+    #     f"{data_root}/images/textcaps",
+    # ],
+    # classification_imagenet=[
+    #     f"{anno_root_it}/image/classification/imagenet/train.json", 
+    #     f"{data_root}/images/m3it/imagenet",
+    # ],
+    # classification_coco_itm=[
+    #     f"{anno_root_it}/image/classification/coco_itm/train.json", 
+    #     f"{data_root}/images/coco",
+    # ],
+    # conversation_llava=[
+    #     f"{anno_root_it}/image/conversation/llava/train.json", 
+    #     f"{data_root}/images/coco",
+    # ],
+    # reasoning_clevr=[
+    #     f"{anno_root_it}/image/reasoning/clevr/train.json", 
+    #     f"{data_root}/images/m3it/clevr",
+    # ],
+    # reasoning_visual_mrc=[
+    #     f"{anno_root_it}/image/reasoning/visual_mrc/train.json", 
+    #     f"{data_root}/images/m3it/visual_mrc",
+    # ],
+    # reasoning_llava=[
+    #     f"{anno_root_it}/image/reasoning/llava/train.json", 
+    #     f"{data_root}/images/coco",
+    # ],
+    # vqa_vqav2=[
+    #     f"{anno_root_it}/image/vqa/vqav2/train.json", 
+    #     f"{data_root}/images/m3it/vqav2",
+    # ],
+    # vqa_gqa=[
+    #     f"{anno_root_it}/image/vqa/gqa/train.json", 
+    #     f"{data_root}/images/gqa/images",
+    # ],
+    # vqa_okvqa=[
+    #     f"{anno_root_it}/image/vqa/okvqa/train.json", 
+    #     f"{data_root}/images/m3it/okvqa",
+    # ],
+    # vqa_a_okvqa=[
+    #     f"{anno_root_it}/image/vqa/a_okvqa/train.json", 
+    #     f"{data_root}/images/m3it/a_okvqa",
+    # ],
+    # vqa_viquae=[
+    #     f"{anno_root_it}/image/vqa/viquae/train.json", 
+    #     f"{data_root}/images/viquae_images",
+    # ],
+    # vqa_ocr_vqa=[
+    #     f"{anno_root_it}/image/vqa/ocr_vqa/train.json", 
+    #     f"{data_root}/images/ocr_vqa/images",
+    # ],
+    # vqa_text_vqa=[
+    #     f"{anno_root_it}/image/vqa/text_vqa/train.json", 
+    #     f"{data_root}/images/textvqa",
+    # ],
+    # vqa_st_vqa=[
+    #     f"{anno_root_it}/image/vqa/st_vqa/train.json", 
+    #     f"{data_root}/images/m3it/st-vqa",
+    # ],
+    # vqa_docvqa=[
+    #     f"{anno_root_it}/image/vqa/docvqa/train.json", 
+    #     f"{data_root}/images/docvqa",
+    # ],
+    # origin_llava=[
+    #     f"{anno_root_it}/image/origin_llava/train.json", 
+    #     f"{data_root}/images",
+    # ],
     # video
     caption_textvr=[
         f"{anno_root_it}/video/caption/textvr/train.json", 
