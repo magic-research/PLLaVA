@@ -157,8 +157,7 @@ def pllava_answer(conv: Conversation, model, processor, img_list, do_sample=True
                                       top_p=top_p, repetition_penalty=repetition_penalty, length_penalty=length_penalty, temperature=temperature, 
                                       stopping_criteria=stopping_criteria,)
         output_text = processor.batch_decode(output_token, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        if "###" in output_text:
-            output_text = "###".join(output_text.split('###')[:-1])  # remove the stop sign '###'
+
     if print_res: # debug usage
         print('### PROMPTING LM WITH: ', prompt)
         print('### LM OUTPUT TEXT:  ', output_text)
@@ -166,7 +165,9 @@ def pllava_answer(conv: Conversation, model, processor, img_list, do_sample=True
         split_tag = "<|im_start|> assistant\n"
     else:
         split_tag = conv.roles[-1]
-    output_text = output_text.split(split_tag)[-1].rstrip(conv.sep if isinstance(conv.sep, str) else conv.sep[1]).strip()
+    output_text = output_text.split(split_tag)[-1]
+    ending = conv.sep if isinstance(conv.sep, str) else conv.sep[1]
+    output_text = output_text.removesuffix(ending)
     conv.messages[-1][1] = output_text
     return output_text, conv
 
