@@ -167,7 +167,7 @@ def pllava_answer(conv: Conversation, model, processor, img_list, do_sample=True
         split_tag = conv.roles[-1]
     output_text = output_text.split(split_tag)[-1]
     ending = conv.sep if isinstance(conv.sep, str) else conv.sep[1]
-    output_text = output_text.removesuffix(ending)
+    output_text = output_text.removesuffix(ending).strip()
     conv.messages[-1][1] = output_text
     return output_text, conv
 
