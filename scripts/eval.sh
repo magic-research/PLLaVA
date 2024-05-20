@@ -31,7 +31,7 @@ python -m tasks.eval.mvbench.pllava_eval_mvbench \
     --pooling_shape 16-12-12 \
     --conv_mode ${conv_mode}
 
-onv_mode=eval_videoqabench
+conv_mode=eval_videoqabench
 python -m tasks.eval.videoqabench.pllava_eval_videoqabench \
     --pretrained_model_name_or_path ${model_dir} \
     --save_path ${SAVE_DIR}/videoqabench \

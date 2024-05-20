@@ -224,7 +224,7 @@ PLLAVA_INPUTS_DOCSTRING = r"""
             [`PreTrainedTokenizer.__call__`] for details.
 
             [What are input IDs?](../glossary#input-ids)
-        pixel_values (`torch.FloatTensor` of shape `(batch_size, num_channels, image_size, image_size)):
+        pixel_values (`torch.FloatTensor` of shape `(num_videos, num_channels, image_size, image_size)):
             The tensors corresponding to the input images. Pixel values can be obtained using
             [`AutoImageProcessor`]. See [`CLIPImageProcessor.__call__`] for details ([]`LlavaProcessor`] uses
             [`CLIPImageProcessor`] for processing images).
@@ -376,6 +376,13 @@ class PllavaForConditionalGeneration(PllavaPreTrainedModel):
             final_labels[batch_indices, text_to_overwrite] = labels[batch_indices, non_image_indices]
 
         # 5. Fill the embeddings corresponding to the images. Anything that is still zeros needs filling
+        # The padding embedding is not zero in the language model, thus shall be no zeros left unless we are having
+        # different number of video in a samples from the same batch.
+        # 
+        # The current code only supports same video input, with predefined multimodal sequence number per sample.
+        # If the weights are not correctly loaded, the padding embed would be all zero, and cause bug.
+        # See https://github.com/huggingface/transformers/issues/22017 for interesting discussion.
+        # TODO: Figure how to load zero3 weights.
         image_to_overwrite = torch.all(final_embedding == 0, dim=-1)
         image_to_overwrite &= image_to_overwrite.cumsum(-1) > nb_image_pad[:, None].to(target_device)
 

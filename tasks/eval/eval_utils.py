@@ -17,13 +17,14 @@ import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
 from moviepy.editor import VideoFileClip
 
-
+import decord
 from decord import VideoReader, cpu # This is Terrible, if you have this line of import in front of torch, will cause model.to(device) to hang
 from transformers import StoppingCriteria, StoppingCriteriaList
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 
 from utils.easydict import EasyDict
 
+decord.bridge.set_bridge("native")
 IMAGE_TOKEN = "<image>"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -429,7 +430,7 @@ class ChatPllava:
             split_tag = "<|im_start|> assistant\n"
         else:
             split_tag = conv.roles[-1]
-        output_text = output_text.split(split_tag)[-1].rstrip(conv.sep[1])
+        output_text = output_text.split(split_tag)[-1].removesuffix(conv.sep[1])
         conv.assistant_response(output_text)
         return output_text, output_token.cpu().numpy(), conv
     

@@ -1,5 +1,6 @@
 import datetime
 import gc
+import json
 import time
 import os
 import os.path as osp
@@ -19,6 +20,7 @@ import logging
 from accelerate.logging import get_logger
 from accelerate import Accelerator, DistributedType
 from accelerate.utils import set_seed
+import deepspeed
 from peft import get_peft_model, LoraConfig, TaskType
 
 
@@ -35,13 +37,112 @@ from transformers import  (
     get_scheduler,
     AutoModel,
     AutoModelForCausalLM
-    )
+)
+from transformers.modeling_utils import load_state_dict, _load_state_dict_into_model
 from models.pllava import PllavaConfig, PllavaForConditionalGeneration, PllavaProcessor
 
 # logger = logging.getLogger(__name__)
 IMAGE_TOKEN='<image>'
 
 logger = get_logger(__name__)
+
+
+def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
+    """
+    This is the same as
+    [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
+    but for a sharded checkpoint.
+
+    This load is performed efficiently: each checkpoint shard is loaded one by one in RAM and deleted after being
+    loaded in the model.
+
+    Args:
+        model (`torch.nn.Module`): The model in which to load the checkpoint.
+        folder (`str` or `os.PathLike`): A path to a folder containing the sharded checkpoint.
+        strict (`bool`, *optional`, defaults to `True`):
+            Whether to strictly enforce that the keys in the model state dict match the keys in the sharded checkpoint.
+        prefer_safe (`bool`, *optional*, defaults to `False`)
+            If both safetensors and PyTorch save files are present in checkpoint and `prefer_safe` is True, the
+            safetensors files will be loaded. Otherwise, PyTorch files are always loaded when possible.
+
+    Returns:
+        `NamedTuple`: A named tuple with `missing_keys` and `unexpected_keys` fields
+            - `missing_keys` is a list of str containing the missing keys
+            - `unexpected_keys` is a list of str containing the unexpected keys
+    """
+    # Load the index
+    from safetensors.torch import load_file as safe_load_file
+    from transformers.utils import (
+        WEIGHTS_INDEX_NAME,
+        SAFE_WEIGHTS_INDEX_NAME,
+        is_safetensors_available, 
+    )
+    from transformers.pytorch_utils import is_torch_greater_or_equal_than_1_13
+    from functools import partial
+    index_file = os.path.join(folder, WEIGHTS_INDEX_NAME)
+    safe_index_file = os.path.join(folder, SAFE_WEIGHTS_INDEX_NAME)
+
+    index_present = os.path.isfile(index_file)
+    safe_index_present = os.path.isfile(safe_index_file)
+
+    if not index_present and not (safe_index_present and is_safetensors_available()):
+        filenames = (
+            (WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_INDEX_NAME) if is_safetensors_available() else (WEIGHTS_INDEX_NAME,)
+        )
+        raise ValueError(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}.")
+
+    load_safe = False
+    if safe_index_present:
+        if prefer_safe:
+            if is_safetensors_available():
+                load_safe = True  # load safe due to preference
+            else:
+                logger.warning(
+                    f"Cannot load sharded checkpoint at {folder} safely since safetensors is not installed!"
+                )
+        elif not index_present:
+            load_safe = True  # load safe since we have no other choice
+
+    load_index = safe_index_file if load_safe else index_file
+
+    with open(load_index, "r", encoding="utf-8") as f:
+        index = json.load(f)
+
+    shard_files = list(set(index["weight_map"].values()))
+
+    # If strict=True, error before loading any of the state dicts.
+    loaded_keys = index["weight_map"].keys()
+    model_keys = model.state_dict().keys()
+    missing_keys = [key for key in model_keys if key not in loaded_keys]
+    unexpected_keys = [key for key in loaded_keys if key not in model_keys]
+    if strict and (len(missing_keys) > 0 or len(unexpected_keys) > 0):
+        error_message = f"Error(s) in loading state_dict for {model.__class__.__name__}"
+        if len(missing_keys) > 0:
+            str_missing_keys = ",".join([f'"{k}"' for k in missing_keys])
+            error_message += f"\nMissing key(s): {str_missing_keys}."
+        if len(unexpected_keys) > 0:
+            str_unexpected_keys = ",".join([f'"{k}"' for k in unexpected_keys])
+            error_message += f"\nMissing key(s): {str_unexpected_keys}."
+        raise RuntimeError(error_message)
+
+    loader = (
+        safe_load_file
+        if load_safe
+        else partial(torch.load, map_location="cpu", weights_only=is_torch_greater_or_equal_than_1_13)
+    )
+
+    for shard_file in shard_files:
+        state_dict = loader(os.path.join(folder, shard_file))
+        # SOMETIMES RUN THROUGH, SOMETIMES DOESN'T WHY???
+        _load_state_dict_into_model(model, state_dict, start_prefix='')
+
+        # Make sure memory is freed before we load the next state dict.
+        del state_dict
+        gc.collect()
+
+    # Return the same thing as PyTorch load_state_dict function.
+    return torch.nn.modules.module._IncompatibleKeys(missing_keys, unexpected_keys)
+
 
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
@@ -117,9 +218,8 @@ def setup_model(
         with torch.no_grad():
             clip = AutoModel.from_pretrained(config.model.origin_vision, torch_dtype=torch_dtype, device_map="cpu",)
         msg = model.vision_tower.load_state_dict(clip.state_dict(), strict=False)
-        # print(msg)
         msg = model.language_model.load_state_dict(lm_model.state_dict(), strict=False)
-        print(msg)
+        logger.info(f"{msg}")
 
         
     if config.model.freeze_lm:
@@ -155,23 +255,18 @@ def setup_model(
         state_dict = {}
         save_fnames = os.listdir(config.model.pretrained_path)
         if "model.safetensors" in save_fnames:
-            print("Loading weight from", config.model.pretrained_path, "model.safetensors")
-            with safe_open(f"{config.model.pretrained_path}/model.safetensors", framework="pt", device="cpu") as f:
-                for k in f.keys():
-                    state_dict[k] = f.get_tensor(k)
+            weight_fp = osp.join(config.model.pretrained_path, model.safetensors)
+            logger.info(f"Loading weight from {weight_fp}")
+            state_dict = load_state_dict(weight_fp)
+            # msg = model.load_state_dict(state_dict, strict=False,)
+            _load_state_dict_into_model(model, state_dict, start_prefix='')
+
         else:
-            print("Loading weight from", config.model.pretrained_path)
-            for fn in save_fnames:
-                if fn.startswith('model-0000'):
-                    with safe_open(f"{config.model.pretrained_path}/{fn}", framework="pt", device="cpu") as f:
-                        for k in f.keys():
-                            state_dict[k] = f.get_tensor(k)
-        
-        if 'model' in state_dict.keys():
-            msg = model.load_state_dict(state_dict['model'], strict=False)
-        else:
-            msg = model.load_state_dict(state_dict, strict=False)
-        logger.info(msg)
+            logger.info(f"Loading weight from {config.model.pretrained_path}")
+            msg = load_sharded_checkpoint(model, config.model.pretrained_path, strict=True)
+
+
+        logger.info(f'loaded: {msg}')        
         logger.info("=====> Finish loading")
 
     return model, processor

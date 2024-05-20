@@ -33,8 +33,18 @@ The video directories can be found in tasks/train/instruction_data.py. You can a
 <!-- We leveraged the training data from [Videochat2](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2). We only used the video part for video instruct tuning. -->
 
 ## Evaluation Data & Others
-Follow this section to obtain the evaluation open resources.
+Follow this section to obtain the evaluation open resources. For ease of evaluation data preparation, we've uploaded the data we've used for evaluation. The data was processed druing 2024 March/April, and was research intended only. If there's any concerns regarding this, please directly reach out to us.
+We've uploaded our evaluation data at [here](https://huggingface.co/datasets/ermu2001/PLLaVATesting) (including the videos) for ease of starting up.
 
+You can download with hf or with this:
+```shell
+mkdir DATAS
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/MVBench.zip
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/Recaption.zip?download=true -O DATAS/Recaption.zip
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/MVBench.zip
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/VCGBench.zip?download=true -O DATAS/VCGBench.zip
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/VideoQA.zip?download=true -O DATAS/VideoQA.zip
+```
 ### VCGBench
 
 We refer to the VideoChatGPT video question answering evaluation as VCGBench in this repo. We followed the original [repo](https://github.com/mbzuai-oryx/Video-ChatGPT/tree/main) to prepare the evaluation data.

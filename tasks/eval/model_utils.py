@@ -10,6 +10,7 @@ from accelerate import init_empty_weights, dispatch_model, infer_auto_device_map
 from accelerate.utils import get_balanced_memory
 
 from transformers import StoppingCriteria
+from transformers.modeling_utils import load_sharded_checkpoint
 class KeywordsStoppingCriteria(StoppingCriteria):
     def __init__(self, keywords, tokenizer, input_ids):
         self.keywords = keywords
@@ -36,7 +37,16 @@ class KeywordsStoppingCriteria(StoppingCriteria):
             return flag
 
 
-def load_pllava(repo_id, num_frames, use_lora=False, weight_dir=None, lora_alpha=32, use_multi_gpus=False, pooling_shape=(16,12,12)):
+def load_pllava(
+        repo_id,
+        num_frames,
+        use_lora=False,
+        lora_dir=None,
+        weight_dir=None,
+        lora_alpha=32,
+        use_multi_gpus=False,
+        pooling_shape=(16,12,12)
+    ):
     kwargs = {
         'num_frames': num_frames,
     }
@@ -44,62 +54,35 @@ def load_pllava(repo_id, num_frames, use_lora=False, weight_dir=None, lora_alpha
     if num_frames == 0:
         kwargs.update(pooling_shape=(0,12,12)) # produce a bug if ever usen the pooling projector
     config = PllavaConfig.from_pretrained(
-        repo_id if not use_lora else weight_dir,
+        repo_id,
         pooling_shape=pooling_shape,
         **kwargs,
     )
     
     with torch.no_grad():
         model = PllavaForConditionalGeneration.from_pretrained(repo_id, config=config, torch_dtype=torch.bfloat16)
-        
-    try:
         processor = PllavaProcessor.from_pretrained(repo_id)
-    except Exception as e:
-        processor = PllavaProcessor.from_pretrained('llava-hf/llava-1.5-7b-hf')
 
     # config lora
-    if use_lora and weight_dir is not None:
+    if use_lora:
         print("Use lora")
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM, inference_mode=False,  target_modules=["q_proj", "v_proj"],
             r=128, lora_alpha=lora_alpha, lora_dropout=0.
         )
         print("Lora Scaling:", lora_alpha/128)
-        model.language_model = get_peft_model(model.language_model, peft_config)
-        assert weight_dir is not None, "pass a folder to your lora weight"
-        print("Finish use lora")
+        if lora_dir is not None:
+            model.language_model = PeftModel.from_pretrained(model.language_model, lora_dir, config=peft_config)
+        else:
+            model.language_model = get_peft_model(model.language_model, peft_config)
+        print("Finish constructing lora")
     
     # load weights
     if weight_dir is not None:
-        state_dict = {}
-        save_fnames = os.listdir(weight_dir)
-        if "model.safetensors" in save_fnames:
-            use_full = False
-            for fn in save_fnames:
-                if fn.startswith('model-0'):
-                    use_full=True        
-                    break
-        else:
-            use_full= True
-
-        if not use_full:
-            print("Loading weight from", weight_dir, "model.safetensors")
-            with safe_open(f"{weight_dir}/model.safetensors", framework="pt", device="cpu") as f:
-                for k in f.keys():
-                    state_dict[k] = f.get_tensor(k)
-        else:
-            print("Loading weight from", weight_dir)
-            for fn in save_fnames:
-                if fn.startswith('model-0'):
-                    with safe_open(f"{weight_dir}/{fn}", framework="pt", device="cpu") as f:
-                        for k in f.keys():
-                            state_dict[k] = f.get_tensor(k)
-            
-        if 'model' in state_dict.keys():
-            msg = model.load_state_dict(state_dict['model'], strict=False)
-        else:
-            msg = model.load_state_dict(state_dict, strict=False)
+        print(f'loading checkpoint from {weight_dir}')
+        msg = load_sharded_checkpoint(model, weight_dir, strict=True)
         print(msg)
+
     # dispatch model weight
     if use_multi_gpus:
         max_memory = get_balanced_memory(

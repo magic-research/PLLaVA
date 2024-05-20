@@ -95,7 +95,12 @@ def parse_args():
 
 def load_model_and_dataset(rank, world_size, pretrained_model_name_or_path, num_frames, use_lora, lora_alpha, weight_dir, test_ratio, pooling_shape=(16,12,12)):
     # remind that, once the model goes larger (30B+) may cause the memory to be heavily used up. Even Tearing Nodes.,
-    model, processor = load_pllava(pretrained_model_name_or_path, num_frames=num_frames, use_lora=use_lora, weight_dir=weight_dir, lora_alpha=lora_alpha, pooling_shape=pooling_shape)
+    model, processor = load_pllava(pretrained_model_name_or_path,
+                                   num_frames=num_frames,
+                                   weight_dir=weight_dir,
+                                   use_lora=use_lora,
+                                   lora_alpha=lora_alpha,
+                                   pooling_shape=pooling_shape)
     logger.info('done loading llava')
     #  position embedding
     model = model.to(torch.device(rank))
