@@ -277,7 +277,7 @@ This section mainly introduce how to reproduce the evaluation or evaluate your o
 
 #### Set up Evaluation Data
 
-Make sure you set up the "DATAS" directory as [here](DATA.md#evaluation-data--others), then you would be able to run the inference with fortune! The evaluation data directory of DATAS would look like:
+Make sure you set up the "DATAS" directory as [here](DATA.md#evaluation-data--others), we have uploaded the evaluation data we used for ease of starting. Then you would be able to run the inference with fortune! The evaluation data directory of DATAS would look like:
 
 ```
 DATAS/:

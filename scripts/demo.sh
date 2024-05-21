@@ -15,7 +15,7 @@ echo Running DEMO On Devices: ${CUDA_VISIBLE_DEVICES}
 #     --use_lora \
 #     --weight_dir ${weight_dir} \
 #     --lora_alpha ${lora_alpha} \
-#     --conv_mode eval_vcg_llava_next \
+#     --conv_mode eval_vcg_llavanext \
 #     --use_multi_gpus \
 
 

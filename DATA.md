@@ -36,7 +36,7 @@ The video directories can be found in tasks/train/instruction_data.py. You can a
 Follow this section to obtain the evaluation open resources. For ease of evaluation data preparation, we've uploaded the data we've used for evaluation. The data was processed druing 2024 March/April, and was research intended only. If there's any concerns regarding this, please directly reach out to us.
 We've uploaded our evaluation data at [here](https://huggingface.co/datasets/ermu2001/PLLaVATesting) (including the videos) for ease of starting up.
 
-You can download with hf or with this:
+You can download with hf or with this, and then unzip the files:
 ```shell
 mkdir DATAS
 wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/MVBench.zip

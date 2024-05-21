@@ -68,6 +68,7 @@ if __name__ == '__main__':
     repo_ids = [
         'ermu2001/pllava-7b',
         'ermu2001/pllava-13b',
+        # 'ermu2001/pllava-34b',
     ]
     for repo_id in repo_ids:
         local_dir = repo_id.replace('ermu2001', 'MODELS')
