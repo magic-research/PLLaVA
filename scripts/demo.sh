@@ -19,6 +19,16 @@ echo Running DEMO On Devices: ${CUDA_VISIBLE_DEVICES}
 #     --use_multi_gpus \
 
 
+# # If you are running on low resources devices (for example running 7B model on one NVIDIA GeForce RTX 4070 with 12G memory), execute this command:
+# CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-"0"} python -m tasks.eval.demo.pllava_demo \
+#     --pretrained_model_name_or_path ${model_dir} \
+#     --num_frames ${num_frames} \
+#     --use_lora \
+#     --weight_dir ${weight_dir} \
+#     --lora_alpha ${lora_alpha} \
+#     --use_multi_gpus \
+#     --conv_mode plain
+
 # 7B and 13B, There are problem if Model was split around A100 40G... Probably because some unkown bug in accelerate dispatch
 CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-"0"} python -m tasks.eval.demo.pllava_demo \
     --pretrained_model_name_or_path ${model_dir} \
@@ -26,6 +36,5 @@ CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-"0"} python -m tasks.eval.demo.plla
     --use_lora \
     --weight_dir ${weight_dir} \
     --lora_alpha ${lora_alpha} \
-    --conv_mode plain
-
-
+    --conv_mode plain  
+      

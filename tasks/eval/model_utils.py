@@ -92,7 +92,10 @@ def load_pllava(
             dtype='bfloat16',
             low_zero=False,
         )
-
+        for k, mem in max_memory.items():
+            if isinstance(k, int):
+                max_memory[k] = mem - 2_000_000_000 # leave out 2G for inference
+                
         device_map = infer_auto_device_map(
             model,
             max_memory=max_memory,
@@ -100,7 +103,11 @@ def load_pllava(
             dtype='bfloat16'
         )
 
-        dispatch_model(model, device_map=device_map)
+        dispatch_model(
+            model,
+            device_map=device_map,
+            offload_dir="tmp/offload"
+        )
         print(model.hf_device_map)
 
     model = model.eval()

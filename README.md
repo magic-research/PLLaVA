@@ -99,7 +99,7 @@ First, you will need to set up the environment and download some pre-trained wei
 
 This repo is built up using [transformers](https://github.com/huggingface/transformers) for model construction along with [accelerate](https://github.com/huggingface/accelerate) for distributed training. Follow the instructions to install the needed environment.
 
-1. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment setup, we recommend creating the virtual environment with:
+0. Above all, the following environment set up is for python 3.10. If you choose to use conda for environment setup, we recommend creating the virtual environment with:
 ```bash
 conda create -n pllava python=3.10
 ```
@@ -122,8 +122,12 @@ Otherwise, you would need to install a torch for your server first, then install
 pip install -r requirements.torch.txt # decide your own requirements, (this is for cu11), or install torch directly following the official website.
 pip install -r requirements.no_torch.txt # install the following
 ```
+For flash attention support, you are to install flash-attn manually. You might consider starting with the folloing installation, but refer to the [official flash-attn repo](https://github.com/Dao-AILab/flash-attention) for further troubleshooting:
+```shell
+pip install flash-attn --no-build-isolation
+```
 
-1. Prepare the model.
+2. Prepare the model.
 We prefer to have huggingface models explicitly downloaded to a MODELS directory. However, if you are familiar with huggingface-hub usage, feel free to organize the model yourself.
 ```
 python python_scripts/hf.py
@@ -219,6 +223,8 @@ bash scripts/demo.sh ${model_dir} ${weights_dir}
 ```
 
 Now check out the application demo and try play with PLLAVA!
+
+The codebase supports inference on low memory GPU with transformers implementations of offload inference. A exemplary execution code is [here](./scripts/demo.sh#L22).
 
 ### Train
 
