@@ -609,10 +609,11 @@ def main(config):
         with torch.no_grad():
             accelerator.wait_for_everyone()
             unwrapped_model = accelerator.unwrap_model(model)
-            if not config.deepspeed:
-                save_state_dict = {k:v for k,v in accelerator.get_state_dict(model).items() if "lora_" in k or "multi_modal_projector" in k}
-            else:
-                save_state_dict = accelerator.get_state_dict(model)
+            # if not config.deepspeed:
+            #     save_state_dict = {k:v for k,v in accelerator.get_state_dict(model).items() if "lora_" in k or "multi_modal_projector" in k}
+            # else:
+            #     save_state_dict = accelerator.get_state_dict(model)
+            save_state_dict = accelerator.get_state_dict(model)
             unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{epoch:02d}"),
                                             is_main_process=accelerator.is_main_process,
                                             save_function=accelerator.save,
