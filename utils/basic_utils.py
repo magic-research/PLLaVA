@@ -153,11 +153,11 @@ class MetricLogger(object):
             '[{0' + space_fmt + '}/{1}]',
             'eta: {eta}',
             '{meters}',
-            'time: {time}',
-            'data: {data}'
+            'train-interval-time: {time}(s)',
+            'data-interval-time: {data}(s)'
         ]
         if torch.cuda.is_available():
-            log_msg.append('max mem: {memory:.0f} res mem: {res_mem:.0f}')
+            log_msg.append('max mem: {memory:.0f}(MB) res mem: {res_mem:.0f}(MB)')
         log_msg = self.delimiter.join(log_msg)
         MB = 1024.0 * 1024.0
         for obj in iterable:
@@ -171,7 +171,8 @@ class MetricLogger(object):
                     logger.info(log_msg.format(
                         i, len(iterable), eta=eta_string,
                         meters=str(self),
-                        time=str(iter_time), data=str(data_time),
+                        time=str(iter_time),
+                        data=str(data_time),
                         memory=torch.cuda.max_memory_allocated() / MB,
                         res_mem=torch.cuda.max_memory_reserved() / MB,
                     ))

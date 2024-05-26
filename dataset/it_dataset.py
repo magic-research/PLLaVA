@@ -60,7 +60,7 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
                     if os.path.exists(os.path.join(self.data_root, filename)):
                         annos.append(ann)
                     else:
-                        ...
+                        logger.warn(f"no {os.path.join(self.data_root, filename)}, skipping sample; [In label_file {self.label_file}]")
         self.anno = annos
         self.num_examples = len(self.anno)
 

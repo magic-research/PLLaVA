@@ -1,5 +1,6 @@
 import datetime
 import gc
+import glob
 import json
 import time
 import os
@@ -49,6 +50,7 @@ logger = get_logger(__name__)
 
 def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
     """
+    COPIED FROM https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/modeling_utils.py#L417
     This is the same as
     [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
     but for a sharded checkpoint.
@@ -208,7 +210,7 @@ def setup_model(
                                                use_pooling=config.model.use_pooling,
                                                gradient_checkpointing=config.gradient_checkpointing,
                                                )
-    print("====>gradient_checkpointing",model_config.gradient_checkpointing)
+    logger.info(f"====>gradient_checkpointing {model_config.gradient_checkpointing}")
 
     model = PllavaForConditionalGeneration.from_pretrained(config.model.repo_id, config=model_config, torch_dtype=torch_dtype)
 
@@ -250,7 +252,7 @@ def setup_model(
         model.language_model = get_peft_model(model.language_model, peft_config)
         model.language_model.print_trainable_parameters()
 
-    if config.model.pretrained_path is not None and not config.deepspeed:
+    if config.model.pretrained_path is not None:
         logger.info("======> loading pretrained weights from " + str(config.model.pretrained_path))
         state_dict = {}
         save_fnames = os.listdir(config.model.pretrained_path)
@@ -258,7 +260,6 @@ def setup_model(
             weight_fp = osp.join(config.model.pretrained_path, model.safetensors)
             logger.info(f"Loading weight from {weight_fp}")
             state_dict = load_state_dict(weight_fp)
-            # msg = model.load_state_dict(state_dict, strict=False,)
             _load_state_dict_into_model(model, state_dict, start_prefix='')
 
         else:
@@ -455,7 +456,7 @@ def main(config):
 
     start_epoch = 0
     num_batches = sum(len(loader) for loader in train_loaders)
-    global_step = start_epoch * num_batches  # the steps before divided by accumulation
+    global_step = start_epoch * num_batches  # the steps before divided by accumulation, which is the data iteration step
     if osp.exists(config.output_dir):
         subfolders = os.listdir(config.output_dir)
         sample_saving = False
@@ -488,18 +489,22 @@ def main(config):
                 # num_finish_smaple = int(max_ckpt_num) * config.gradient_accumulation_steps
                 start_epoch = resume_iter // num_batches
                 global_step = resume_iter 
-                resume_cur_epoch_step = resume_iter - start_epoch * num_batches
-            accelerator.print(f"Resume from epoch {start_epoch}, steps{resume_cur_epoch_step}")
-            
-    
+                resume_cur_epoch_step = resume_iter - start_epoch * num_batches   
+            logger.info(f"Resume from epoch {start_epoch}, steps{resume_cur_epoch_step} at dir {ckpt_path}")
 
     # TensorBoard cannot log Enums, need the raw value
     accelerator.init_trackers("train_pllava_nframe", experiment_config)
     start_time = time.time()
-    
-
-
-    logger.info(f"Start training {str(start_time)}, from start_epoch-{start_epoch}, step-{resume_cur_epoch_step}")
+    logger.info("*" * 30 + f" Start training {datetime.datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')}, from start_epoch-{start_epoch}, step-{resume_cur_epoch_step} " + "*" * 30)
+    logger.info(f"Training With Total {accelerator.num_processes} GPUs")
+    logger.info(f"====> Batch Size Configuration")
+    logger.info(f"Per GPU Batch Size:{', '.join([f'{k}-{v}' for k, v in config.inputs.batch_size.items()])}")
+    logger.info(f"gradient_accumulation_steps: {config.gradient_accumulation_steps}")
+    logger.info(f"Total Batch Size: {', '.join([f'{k}-{v * accelerator.num_processes * config.gradient_accumulation_steps}' for k, v in config.inputs.batch_size.items()])}")
+    logger.info(f"====> Checkpointing Configuration")
+    logger.info(f"Checkpointing all states every {config.ckpt_steps}")
+    logger.info(f"Saving Runnable Model every {config.save_steps}")
+    logger.info("*" * 125)
 
     # skip the first `n` batches in the dataloader when resuming from a checkpoint
     active_train_loaders = train_loaders 
@@ -515,115 +520,117 @@ def main(config):
     train_loader = RandomMappingIterator(active_train_loaders, media_types)
 
     for epoch in range(start_epoch, config.scheduler.epochs):  
-        if not config.evaluate:
-            gc.collect()
-            torch.cuda.empty_cache()
-            metric_logger = MetricLogger(delimiter="  ")
-            loss_names = ["loss"]
-            for name in loss_names:
-                for m in media_types:
-                    metric_logger.add_meter(
-                        f"{m}-{name}", SmoothedValue(window=config.metric_window_size, fmt="{value:.4f}")
-                    )
+        gc.collect()
+        torch.cuda.empty_cache()
+        metric_logger = MetricLogger(delimiter="  ")
+        loss_names = ["loss"]
+        for name in loss_names:
+            for m in media_types:
+                metric_logger.add_meter(
+                    f"{m}-{name}", SmoothedValue(window=config.metric_window_size, fmt="{value:.4f}")
+                )
+        header = f"Train Epoch: [{epoch}]"
+        log_freq = config.log_freq
 
-            header = f"Train Epoch: [{epoch}]"
-            log_freq = config.log_freq
+        iterator = metric_logger.log_every(train_loader, log_freq, header)
+        mini_batch_losses = []
 
-            iterator = metric_logger.log_every(train_loader, log_freq, header)
-            mini_batch_losses = []
-
-            for i, (media_type, inputs) in enumerate(iterator): # video/image, conversation, instruction, index
-                    
-                with accelerator.accumulate(model):
-                    
-                    inputs['media_type'] = media_type
-                    response = model(**inputs)
-                    loss = response.loss
-                    mini_batch_losses.append(loss.detach().item())
-                    optimizer.zero_grad()
-                    accelerator.backward(loss)
-                    if config.optimizer.max_grad_norm > 0:
-                        if accelerator.sync_gradients:
-                            accelerator.clip_grad_norm_(model.parameters(), config.optimizer.max_grad_norm)
-                    optimizer.step()
-                    lr_scheduler.step()
-                # # logging
-                for name in loss_names:
-                    value = loss
-                    value = value if isinstance(value, float) else value.item()
-                    metric_logger.update(**{f"{media_type}-{name}": value})
-                global_step += 1
-                resume_num_samples = global_step * config.batch_size * accelerator.state.num_processes/1e6
-
-                # save small global step checkpoint in case of breakdown
-                if global_step % config.ckpt_steps == 0:
-                    accelerator.save_state(output_dir=osp.join(config.output_dir, f"ckpt_resume_{resume_num_samples:.4f}M"))
-                    if accelerator.is_main_process:
-                        for fn in os.listdir(config.output_dir):
-                            if "resume" in fn and fn != f"ckpt_resume_{resume_num_samples:.4f}M":
-                                shutil.rmtree(osp.join(config.output_dir, fn))
+        for i, (media_type, inputs) in enumerate(iterator): # video/image, conversation, instruction, index
+            ################################### epoch training loop starts
+            with accelerator.accumulate(model):
+                inputs['media_type'] = media_type
+                response = model(**inputs)
+                loss = response.loss
+                mini_batch_losses.append(loss.detach().item())
+                optimizer.zero_grad()
+                accelerator.backward(loss)
+                if config.optimizer.max_grad_norm > 0:
+                    if accelerator.sync_gradients:
+                        accelerator.clip_grad_norm_(model.parameters(), config.optimizer.max_grad_norm)
+                optimizer.step()
+                lr_scheduler.step()
                 
-                if global_step % config.save_steps == 0:
-                    logger.info(f"global_step {global_step}")
-                    with torch.no_grad():
-                        accelerator.wait_for_everyone()
-                        unwrapped_model = accelerator.unwrap_model(model)
-                        if not config.deepspeed:
-                            save_state_dict = {k:v for k,v in accelerator.get_state_dict(model).items() if "lora_" in k or "multi_modal_projector" in k}
-                        else:
-                            save_state_dict = accelerator.get_state_dict(model)
+            # # logging
+            for name in loss_names:
+                value = loss
+                value = value if isinstance(value, float) else value.item()
+                metric_logger.update(**{f"{media_type}-{name}": value})
+            global_step += 1
+            resume_num_samples = global_step * config.batch_size * accelerator.state.num_processes/1e6
+
+            # save small global step checkpoint in case of breakdown
+            if global_step % config.ckpt_steps == 0:
+                logger.info(f"checkpointing all training states at {global_step}")
+                current_resume_ckpt_dir = osp.join(config.output_dir, f"ckpt_resume_{resume_num_samples:.4f}M")
+                accelerator.save_state(output_dir=current_resume_ckpt_dir)
+                if accelerator.is_main_process:
+                    resume_ckpt_dir_patter = osp.join(config.output_dir, "ckpt_resume_*M")
+                    rm_resume_ckpt_dirs = list(filter(lambda x: x != current_resume_ckpt_dir, glob.glob(resume_ckpt_dir_patter)))
+                    if len(rm_resume_ckpt_dirs) > 0 and osp.isdir(rm_resume_ckpt_dirs[0]):
+                        shutil.rmtree(rm_resume_ckpt_dirs[0])
+
+            if global_step % config.save_steps == 0:
+                logger.info(f"saving model at global_step {global_step}")
+                with torch.no_grad():
+                    accelerator.wait_for_everyone()
+                    unwrapped_model = accelerator.unwrap_model(model)
+                    save_state_dict = accelerator.get_state_dict(model)
+                    if config.model.use_lora:
+                        save_state_dict = {k:v for k,v in save_state_dict.items() if "lora_" in k or "multi_modal_projector" in k}
+
+                    # saving on each node does not fit with deepspeed, will somehow save a model.tensors, would bug, just doesn't fit.
+                    # Thus NOT folloing example code here https://github.com/huggingface/accelerate/blob/c3f422699a5cb7665edd5420b8b106512c09a85d/examples/by_feature/deepspeed_with_config_support.py#L702-L707
+
+                    if accelerator.is_main_process: 
                         unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_step{resume_num_samples:.4f}M"),
-                                            is_main_process=accelerator.is_main_process,
-                                            save_function=accelerator.save,
-                                            state_dict=save_state_dict)
+                                                        is_main_process=accelerator.is_main_process,
+                                                        safe_serialization=True,
+                                                        state_dict=save_state_dict)
                         processor.save_pretrained(osp.join(config.output_dir, f"pretrained_step{resume_num_samples:.4f}M"))
 
-                if global_step % log_freq == 0:
-                    logs = metric_logger.get_global_avg_dict()
-                    logs.update({
-                        "step_loss_no_smoothing": accelerator.gather_for_metrics(loss).mean().item(),
-                        "epoch": epoch,
-                        "step": global_step,
-                        "lr": lr_scheduler.get_last_lr()[0],
-                    })
-                    accelerator.log(logs, step=global_step,)
-                    if accelerator.sync_gradients:
-                        mini_batch_loss = torch.tensor(mini_batch_losses, device='cuda')
-                        accelerator.log({"mini_batch_loss": accelerator.gather_for_metrics(mini_batch_loss).mean().item()},
-                                    step=global_step)
-                        mini_batch_losses = []
-                    
+            if global_step % log_freq == 0:
+                logs = metric_logger.get_global_avg_dict()
+                logs.update({
+                    "step_loss_no_smoothing": accelerator.gather_for_metrics(loss).mean().item(),
+                    "epoch": epoch,
+                    "step": global_step,
+                    "lr": lr_scheduler.get_last_lr()[0],
+                })
+                accelerator.log(logs, step=global_step,)
+                if accelerator.sync_gradients:
+                    mini_batch_loss = torch.tensor(mini_batch_losses, device='cuda')
+                    accelerator.log({"mini_batch_loss": accelerator.gather_for_metrics(mini_batch_loss).mean().item()}, step=global_step)
+                    mini_batch_losses = []
 
-                if config.debug and global_step % 20 == 0:
-                    logger.info("debug mode, break training loop")
-                    break
 
-                if config.debug and global_step % (2 * log_freq + 3) == 0:
-                    logger.info("debug mode, break training loop")
-                    break
+            if config.debug and (global_step % 20 == 0 or global_step % (2 * log_freq + 3) == 0):
+                logger.info("debug mode, break training loop")
+                break
 
-            # gather the stats from all processes
-            metric_logger.synchronize_between_processes()
-            logger.info(f"Averaged stats: {metric_logger.global_avg()}")
-        logger.info(f"Epoch {epoch}")
+            if config.evaluate:
+                logger.warn("Evaluation Not Implemented")
+            ################################### epoch training loop ends
+
+        # gather the stats from all processes
+        metric_logger.synchronize_between_processes()
+        logger.info(f"DONE training Epoch {epoch}: Averaged stats: {metric_logger.global_avg()}")
+        
         with torch.no_grad():
+            logger.info(f"saving model after training for {epoch+1} epoch") # epoch starts from 0
             accelerator.wait_for_everyone()
             unwrapped_model = accelerator.unwrap_model(model)
-            # if not config.deepspeed:
-            #     save_state_dict = {k:v for k,v in accelerator.get_state_dict(model).items() if "lora_" in k or "multi_modal_projector" in k}
-            # else:
-            #     save_state_dict = accelerator.get_state_dict(model)
             save_state_dict = accelerator.get_state_dict(model)
-            unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{epoch:02d}"),
-                                            is_main_process=accelerator.is_main_process,
-                                            save_function=accelerator.save,
-                                            state_dict=save_state_dict)
-            processor.save_pretrained(osp.join(config.output_dir, f"pretrained_step{epoch:02d}"))
-            accelerator.save_state(output_dir=osp.join(config.output_dir, f"ckpt_epoch{epoch:02d}"))
+            if config.model.use_lora:
+                save_state_dict = {k:v for k,v in save_state_dict.items() if "lora_" in k or "multi_modal_projector" in k}
 
-
-        if config.evaluate:
-            break
+            # saving on each node does not fit with deepspeed, will somehow save a model.tensors, would bug, just doesn't fit.
+            # Thus NOT folloing example code here https://github.com/huggingface/accelerate/blob/c3f422699a5cb7665edd5420b8b106512c09a85d/examples/by_feature/deepspeed_with_config_support.py#L702-L707
+            if accelerator.is_main_process: 
+                unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{resume_num_samples:.4f}"),
+                                                is_main_process=accelerator.is_main_process,
+                                                safe_serialization=True,
+                                                state_dict=save_state_dict)
+                processor.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{resume_num_samples:.4f}"))
 
     accelerator.end_training()
     accelerator.wait_for_everyone()

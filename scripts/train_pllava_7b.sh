@@ -5,14 +5,14 @@ export PYTHONPATH=${PYTHONPATH}:${which_python}
 export PYTHONPATH=${PYTHONPATH}:.
 echo "PYTHONPATH: ${PYTHONPATH}"
 
-OUTPUT_DIR=./pllava_video_outputs/test_train_7b_reconstruct
+OUTPUT_DIR=./pllava_video_outputs/test_train_7b_lora
 
 pooling_shape=(16,12,12)
 num_save_samples=80000
 num_gpus=8
 full_batch_size=128
 batch_size=8
-save_steps=$[$num_save_samples/($batch_size*$num_gpus)]
+save_steps=$[$num_save_samples/($batch_size*$num_gpus)] # save step is base on the "seen data" by the model. As the loop was counted base on data iteration, save step here doesn't take gradient accumulation into consideration.
 ckpt_steps=$[$save_steps/10]
 gradient_accumulation_steps=$[$full_batch_size/($batch_size*$num_gpus)]
 echo $batch_size

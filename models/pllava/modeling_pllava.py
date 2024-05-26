@@ -200,10 +200,6 @@ class PllavaPreTrainedModel(PreTrainedModel):
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
 
-        elif isinstance(module, PllavaMultiModalProjector):
-            # module.register_embed.data.normal_(mean=0.0, std=std)
-            if self.config.register:
-                module.register_embed.data.zero_()
 
     @property
     def _supports_sdpa(self):
@@ -288,10 +284,10 @@ class PllavaForConditionalGeneration(PllavaPreTrainedModel):
     def __init__(self, config: PllavaConfig):
         super().__init__(config)
         self.config = config
-        self.vision_tower = AutoModel.from_config(config.vision_config)
+        self.vision_tower = AutoModel.from_config(config.vision_config, torch_dtype=None,) # use the upper most dtype for all models, set torch_dtype to None
         self.multi_modal_projector = PllavaMultiModalProjector(config)
         self.vocab_size = config.vocab_size
-        self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=config.torch_dtype, attn_implementation="flash_attention_2")
+        self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=None, attn_implementation="flash_attention_2") # use the upper most dtype for all models, set torch_dtype to None
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else self.config.text_config.pad_token_id
         assert self.pad_token_id is not None, 'provide the model with pad_token_id, this would be used to arranging new embedings'
         self.post_init()

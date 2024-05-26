@@ -1,0 +1,15 @@
+compute_environment: LOCAL_MACHINE
+debug: true
+deepspeed_config:
+ deepspeed_config_file: scripts/zero3_config_7B.json
+ zero3_init_flag: true
+distributed_type: DEEPSPEED
+fsdp_config: {}
+machine_rank: 0
+main_process_ip: null
+main_process_port: null
+main_training_function: main
+gpu_ids: 0,1,2,3,4,5,6,7
+num_machines: 1
+num_processes: 8
+use_cpu: false
