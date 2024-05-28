@@ -14,6 +14,7 @@ import shutil
 from typing import Optional, Union
 
 import torch
+import torch.nn
 import numpy as np
 from safetensors import safe_open
 
@@ -46,11 +47,45 @@ from models.pllava import PllavaConfig, PllavaForConditionalGeneration, PllavaPr
 IMAGE_TOKEN='<image>'
 
 logger = get_logger(__name__)
+accelerator: Accelerator = None
 
+def load_state_dict_into_model(model_to_load, state_dict, start_prefix):
+    # copied and altered from:
+    #   https://github.com/huggingface/transformers/blob/9d35edbb30625489bf286a9b15aed0c5a3119c1c/src/transformers/modeling_utils.py#L650
+    #   https://github.com/baaivision/EVA/blob/2ca37a8c0d82b9496754f3fa9c3966b4caa54d75/EVA-CLIP-18B/shinji/eva_clip/factory.py#L168
 
-def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
+    # copy state_dict so _load_from_state_dict can modify it
+    metadata = getattr(state_dict, "_metadata", None)
+    state_dict = state_dict.copy()
+    if metadata is not None:
+        state_dict._metadata = metadata
+    error_msgs = []
+    # PyTorch's `_load_from_state_dict` does not copy parameters in a module's descendants
+    # so we need to apply the function recursively.
+    def load(module: torch.nn.Module, prefix=""):
+        local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
+        args = (state_dict, prefix, local_metadata, True, [], [], error_msgs)
+        # Parameters of module and children will start with prefix. We can exit early if there are none in this state_dict
+        if accelerator.distributed_type == DistributedType.DEEPSPEED:
+            import deepspeed
+            with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
+                if torch.distributed.get_rank() == 0:
+                    module._load_from_state_dict(*args)
+        else:
+            module._load_from_state_dict(*args)
+        for name, child in module._modules.items():
+            if child is not None:
+                load(child, prefix + name + ".")
+
+    load(model_to_load, prefix=start_prefix)
+    # Delete `state_dict` so it could be collected by GC earlier. Note that `state_dict` is a copy of the argument, so
+    # it's safe to delete it.
+    del state_dict
+    return error_msgs
+
+def load_from_sharded(model, folder, strict=True, prefer_safe=True):
     """
-    COPIED FROM https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/modeling_utils.py#L417
+    COPIED and ALTERED FROM https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/modeling_utils.py#L417
     This is the same as
     [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
     but for a sharded checkpoint.
@@ -91,41 +126,42 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
         filenames = (
             (WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_INDEX_NAME) if is_safetensors_available() else (WEIGHTS_INDEX_NAME,)
         )
-        raise ValueError(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}.")
+        logger.warning(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}. Assume not sharded, directly loading from model.safetensors. Be aware: also not checking for key matching.")
+        shard_files = ['model.safetensors']
+    else:
+        load_safe = False
+        if safe_index_present:
+            if prefer_safe:
+                if is_safetensors_available():
+                    load_safe = True  # load safe due to preference
+                else:
+                    logger.warning(
+                        f"Cannot load sharded checkpoint at {folder} safely since safetensors is not installed!"
+                    )
+            elif not index_present:
+                load_safe = True  # load safe since we have no other choice
 
-    load_safe = False
-    if safe_index_present:
-        if prefer_safe:
-            if is_safetensors_available():
-                load_safe = True  # load safe due to preference
-            else:
-                logger.warning(
-                    f"Cannot load sharded checkpoint at {folder} safely since safetensors is not installed!"
-                )
-        elif not index_present:
-            load_safe = True  # load safe since we have no other choice
+        load_index = safe_index_file if load_safe else index_file
 
-    load_index = safe_index_file if load_safe else index_file
+        with open(load_index, "r", encoding="utf-8") as f:
+            index = json.load(f)
 
-    with open(load_index, "r", encoding="utf-8") as f:
-        index = json.load(f)
+        shard_files = list(set(index["weight_map"].values()))
 
-    shard_files = list(set(index["weight_map"].values()))
-
-    # If strict=True, error before loading any of the state dicts.
-    loaded_keys = index["weight_map"].keys()
-    model_keys = model.state_dict().keys()
-    missing_keys = [key for key in model_keys if key not in loaded_keys]
-    unexpected_keys = [key for key in loaded_keys if key not in model_keys]
-    if strict and (len(missing_keys) > 0 or len(unexpected_keys) > 0):
-        error_message = f"Error(s) in loading state_dict for {model.__class__.__name__}"
-        if len(missing_keys) > 0:
-            str_missing_keys = ",".join([f'"{k}"' for k in missing_keys])
-            error_message += f"\nMissing key(s): {str_missing_keys}."
-        if len(unexpected_keys) > 0:
-            str_unexpected_keys = ",".join([f'"{k}"' for k in unexpected_keys])
-            error_message += f"\nMissing key(s): {str_unexpected_keys}."
-        raise RuntimeError(error_message)
+        # If strict=True, error before loading any of the state dicts.
+        loaded_keys = index["weight_map"].keys()
+        model_keys = model.state_dict().keys()
+        missing_keys = [key for key in model_keys if key not in loaded_keys]
+        unexpected_keys = [key for key in loaded_keys if key not in model_keys]
+        if strict and (len(missing_keys) > 0 or len(unexpected_keys) > 0):
+            error_message = f"Error(s) in loading state_dict for {model.__class__.__name__}"
+            if len(missing_keys) > 0:
+                str_missing_keys = ",".join([f'"{k}"' for k in missing_keys])
+                error_message += f"\nMissing key(s): {str_missing_keys}."
+            if len(unexpected_keys) > 0:
+                str_unexpected_keys = ",".join([f'"{k}"' for k in unexpected_keys])
+                error_message += f"\nUnexpected key(s): {str_unexpected_keys}."
+            raise RuntimeError(error_message)
 
     loader = (
         safe_load_file
@@ -134,17 +170,21 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
     )
 
     for shard_file in shard_files:
-        state_dict = loader(os.path.join(folder, shard_file))
+        shard_filepath = os.path.join(folder, shard_file)
+        state_dict = loader(shard_filepath)
         # SOMETIMES RUN THROUGH, SOMETIMES DOESN'T WHY???
-        _load_state_dict_into_model(model, state_dict, start_prefix='')
-
+        # load_zero_partitions(model, state_dict, True, 'test')
+        error_message = load_state_dict_into_model(model, state_dict, '')
+        if len(error_message) != 0:
+            raise ValueError(f"Error Loading {shard_filepath}: {error_message}")
+        else:
+            logger.info(f"Successfully Loaded from {shard_filepath}")
         # Make sure memory is freed before we load the next state dict.
         del state_dict
         gc.collect()
 
     # Return the same thing as PyTorch load_state_dict function.
     return torch.nn.modules.module._IncompatibleKeys(missing_keys, unexpected_keys)
-
 
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
@@ -193,11 +233,10 @@ def setup_model(
     else:
         torch_dtype = config.model.torch_dtype
     logger.info("Creating model")
-    
+    logger.info(f"Loading from: config.model.repo_id {config.model.repo_id}")
     processor = PllavaProcessor.from_pretrained(config.model.repo_id, 
                                                padding_side='right', 
-                                               center_pad=config.preprocess.center_pad,
-                                               )
+                                               center_pad=config.preprocess.center_pad,)
     
 
     model_config = PllavaConfig.from_pretrained(config.model.repo_id,
@@ -210,8 +249,7 @@ def setup_model(
                                                use_pooling=config.model.use_pooling,
                                                gradient_checkpointing=config.gradient_checkpointing,
                                                )
-    logger.info(f"====>gradient_checkpointing {model_config.gradient_checkpointing}")
-
+    logger.info(f"gradient_checkpointing {model_config.gradient_checkpointing}")
     model = PllavaForConditionalGeneration.from_pretrained(config.model.repo_id, config=model_config, torch_dtype=torch_dtype)
 
     if config.model.load_from_origin:
@@ -253,7 +291,7 @@ def setup_model(
         model.language_model.print_trainable_parameters()
 
     if config.model.pretrained_path is not None:
-        logger.info("======> loading pretrained weights from " + str(config.model.pretrained_path))
+        logger.info(f"loading pretrained weights from config.model.pretrained_path {config.model.pretrained_path}")
         state_dict = {}
         save_fnames = os.listdir(config.model.pretrained_path)
         if "model.safetensors" in save_fnames:
@@ -264,11 +302,11 @@ def setup_model(
 
         else:
             logger.info(f"Loading weight from {config.model.pretrained_path}")
-            msg = load_sharded_checkpoint(model, config.model.pretrained_path, strict=True)
+            msg = load_from_sharded(model, config.model.pretrained_path, strict=True)
 
 
         logger.info(f'loaded: {msg}')        
-        logger.info("=====> Finish loading")
+        logger.info("Finish loading")
 
     return model, processor
 
@@ -402,7 +440,7 @@ def main(config):
         log_with=config.report_to,
         project_dir=config.output_dir
     )
-
+    global accelerator
     accelerator = Accelerator(
         gradient_accumulation_steps=config.gradient_accumulation_steps,
         **accelerator_log_kwargs
@@ -475,7 +513,7 @@ def main(config):
         if len(ckpt_iters) > 0:
             resume_iter = max(ckpt_iters)
             ckpt_path = osp.join(config.output_dir, ckpt_paths[ckpt_iters.index(resume_iter)])
-            accelerator.print(f"Resumed from checkpoint: {ckpt_path}")
+            logger.info(f"Resumed from checkpoint: {ckpt_path}")
             accelerator.load_state(ckpt_path)
             if sample_saving:
                 resume_iter = int(resume_iter*1e6/(config.batch_size*accelerator.state.num_processes))
@@ -616,7 +654,7 @@ def main(config):
         logger.info(f"DONE training Epoch {epoch}: Averaged stats: {metric_logger.global_avg()}")
         
         with torch.no_grad():
-            logger.info(f"saving model after training for {epoch+1} epoch") # epoch starts from 0
+            logger.info(f"saving model after training for the {epoch} epoch") # epoch starts from 0
             accelerator.wait_for_everyone()
             unwrapped_model = accelerator.unwrap_model(model)
             save_state_dict = accelerator.get_state_dict(model)
@@ -626,11 +664,11 @@ def main(config):
             # saving on each node does not fit with deepspeed, will somehow save a model.tensors, would bug, just doesn't fit.
             # Thus NOT folloing example code here https://github.com/huggingface/accelerate/blob/c3f422699a5cb7665edd5420b8b106512c09a85d/examples/by_feature/deepspeed_with_config_support.py#L702-L707
             if accelerator.is_main_process: 
-                unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{resume_num_samples:.4f}"),
+                unwrapped_model.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{epoch:02}"),
                                                 is_main_process=accelerator.is_main_process,
                                                 safe_serialization=True,
                                                 state_dict=save_state_dict)
-                processor.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{resume_num_samples:.4f}"))
+                processor.save_pretrained(osp.join(config.output_dir, f"pretrained_epoch{epoch:02}"))
 
     accelerator.end_training()
     accelerator.wait_for_everyone()

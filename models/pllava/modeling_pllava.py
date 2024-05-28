@@ -35,7 +35,6 @@ from transformers.models.auto import AutoModel, AutoModelForCausalLM
 import einops
 
 from .configuration_pllava import PllavaConfig
-import pickle
 
 logger = logging.get_logger(__name__)
 

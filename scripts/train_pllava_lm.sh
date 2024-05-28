@@ -15,7 +15,6 @@ batch_size=4 # this is the batch size for each single gpu
 save_steps=$[$num_save_samples/($batch_size*$num_gpus)]
 ckpt_steps=$[$save_steps/10]
 gradient_accumulation_steps=$[$full_batch_size/($batch_size*$num_gpus)] # some how the gradient accumulation steps should be computed as it was to pass in to Accelerate for not knowing the total GPUs, thus not able to compute afterwards. Align this with your accelerate configuration
-# repo_id=llava-hf/llava-v1.6-vicuna-13b-hf
 repo_id=llava-hf/llava-v1.6-vicuna-7b-hf
 config_file=tasks/train/config_pllava_nframe.py
 # accel_config=scripts/accel_config_multigpu.yaml # connot run even with batch size 1
@@ -40,9 +39,8 @@ echo num gpus: $num_gpus
 echo gradient accumulation steps: $gradient_accumulation_steps
 echo config file: $config_file
 echo accelerate config file: $accel_config
-echo repo_id: ${repo_id:-"null"}
-echo pretrained_path: ${pretrained_path:-"null"}
 
+# defualt configuration are as in ${config_file}, checkout for congiuraion
 accelerate launch --main_process_port 6877 --config_file ${accel_config} tasks/train/train_pllava_nframe_accel.py  \
     ${config_file} \
     output_dir ${OUTPUT_DIR} \
@@ -55,14 +53,6 @@ accelerate launch --main_process_port 6877 --config_file ${accel_config} tasks/t
     batch_size $batch_size \
     model.pooling_method avg \
     model.pooling_shape $pooling_shape \
-    model.use_pooling True \
-    gradient_checkpointing True \
-    preprocess.center_pad False \
-    preprocess.clip_transform False \
-    optimizer.lr 2e-5 \
-    scheduler.epochs 3 \
-    scheduler.warmup_ratio 0.2 \
-    scheduler.min_lr_multi 0.25 \
     scheduler.is_videochat2_custom True \
     preprocess.mm_alone False \
     preprocess.random_shuffle False \

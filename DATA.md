@@ -41,9 +41,9 @@ You can download with hf or with this, and then unzip the files:
 mkdir DATAS
 wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/MVBench.zip
 wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/Recaption.zip?download=true -O DATAS/Recaption.zip
-wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/MVBench.zip
 wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/VCGBench.zip?download=true -O DATAS/VCGBench.zip
 wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/VideoQA.zip?download=true -O DATAS/VideoQA.zip
+wget https://huggingface.co/datasets/ermu2001/PLLaVATesting/resolve/main/DATAS/MVBench.zip?download=true -O DATAS/TRAIN_TEST.zip # a small demo data for training, you can inspect on what the training data would be like with this
 ```
 ### VCGBench
 

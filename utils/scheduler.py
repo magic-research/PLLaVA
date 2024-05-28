@@ -20,8 +20,8 @@ def create_scheduler(args, optimizer):
 
 
 def get_cosine_schedule_with_warmup(
-        optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int,
-        num_cycles: float = 0.5, min_lr_multi: float = 0., last_epoch: int = -1
+    optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int,
+    num_cycles: float = 0.5, min_lr_multi: float = 0., last_epoch: int = -1
 ):
     """
     Modified from https://github.com/huggingface/transformers/blob/v4.15.0/src/transformers/optimization.py

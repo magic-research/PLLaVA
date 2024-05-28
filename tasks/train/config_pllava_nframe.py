@@ -11,7 +11,6 @@ num_workers = 8
 save_steps=10000
 ckpt_steps=1000
 stop_key = None
-deepspeed=False
 # ========================= input ==========================
 num_frames = 16
 num_frames_test = 1
@@ -63,7 +62,7 @@ model = dict(
 preprocess = dict(
     system="",
     mm_alone=True,
-    random_shuffle=True,
+    random_shuffle=True, # shuffles the conversation (if multi round)
     add_second_msg=True,
     roles=['USER:', 'ASSISTANT:'],
     end_signal=(' ', '</s>'),
@@ -91,12 +90,10 @@ optimizer = dict(
     different_lr=dict(enable=False, module_names=[], lr=1e-3),
 )
 
-# scheduler = dict(sched="cosine", epochs=3, min_lr_multi=0.25, warmup_epochs=0.6)
-# scheduler = dict(sched="cosine", epochs=3, min_lr_multi=0.25, warmup_epochs=0.6)
 scheduler = dict(
     is_videochat2_custom=False,
     sched="cosine", 
-    epochs=2, 
+    epochs=3, 
     warmup_ratio=0.2,
     min_lr_multi=0.25)
 

@@ -1,12 +1,9 @@
 import logging
 import os
 import json
-import sqlite3
 import random
-from os.path import basename
 
 import numpy as np
-import datetime
 
 from dataset.base_dataset import ImageVideoBaseDataset
 from dataset.video_utils import VIDEO_READER_FUNCS
@@ -38,13 +35,14 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
             self.media_type = "image"
         self.label_file, self.data_root = ann_file[:2]
 
-        logger.info('Load json file')
+        logger.info(f'Load annotations from json file  {self.label_file}')
         with open(self.label_file, 'r') as f:
             self.anno = json.load(f)
         self.num_examples = len(self.anno)
         self.transform = transform
         annos = []
-        for ann in self.anno:
+        logger.info(f'Validating existing data in {self.label_file}')
+        for i, ann in enumerate(self.anno):
             filename = ann['video'] if 'video' in ann else ann['image']
             if self.media_type =='video' and "webvid" in self.data_root:
                 video_id, extension = os.path.splitext(os.path.basename(filename))
@@ -55,7 +53,7 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
             else:
 
                 if filename is None or filename=="None":
-                    pass
+                    logger.warn(f"caught filename is None in annotation file at index {i} in {self.label_file}")
                 else:
                     if os.path.exists(os.path.join(self.data_root, filename)):
                         annos.append(ann)

@@ -76,7 +76,7 @@ class PllavaConfig(PretrainedConfig):
     >>> configuration = model.config
     ```"""
 
-    model_type = "llava"
+    model_type = "pllava"
     is_composition = False
 
     def __init__(
