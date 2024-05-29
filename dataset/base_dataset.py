@@ -72,7 +72,7 @@ class ImageVideoBaseDataset(Dataset):
         for _ in range(self.num_tries):
             try:
                 max_num_frames = self.max_num_frames if hasattr(self, "max_num_frames") else -1
-                if "webvid" in data_path:
+                if False: # if "webvid" in data_path:
                     hdfs_dir="hdfs://harunava/home/byte_ailab_us_cvg/user/weimin.wang/videogen_data/webvid_data/10M_full_train"
                     video_name = os.path.basename(data_path)
                     video_id, extension = os.path.splitext(video_name)

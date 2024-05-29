@@ -116,7 +116,7 @@ def create_dataset(dataset_type, config):
                             "video_reader_type": "gif"
                         })
                         dataset_kwargs.update(video_only_dataset_kwargs_train)
-                    elif "webvid" in train_file[1]:
+                    elif False: # elif "webvid" in train_file[1]:
                         video_only_dataset_kwargs_train.update({
                             "video_reader_type": "hdfs"
                         })

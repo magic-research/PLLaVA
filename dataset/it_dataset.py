@@ -15,7 +15,9 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
     media_type = "image"
 
     def __init__(
-        self, ann_file, transform, 
+        self,
+        ann_file,
+        transform, 
         system="", role=("Human", "Assistant"),
         mm_alone=True,
         add_second_msg=True,
@@ -44,7 +46,7 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
         logger.info(f'Validating existing data in {self.label_file}')
         for i, ann in enumerate(self.anno):
             filename = ann['video'] if 'video' in ann else ann['image']
-            if self.media_type =='video' and "webvid" in self.data_root:
+            if False: # if self.media_type =='video' and "webvid" in self.data_root:
                 video_id, extension = os.path.splitext(os.path.basename(filename))
                 if video_id not in self.keys_indexfile:
                     pass
@@ -55,10 +57,12 @@ class ITImgTrainDataset(ImageVideoBaseDataset):
                 if filename is None or filename=="None":
                     logger.warn(f"caught filename is None in annotation file at index {i} in {self.label_file}")
                 else:
-                    if os.path.exists(os.path.join(self.data_root, filename)):
-                        annos.append(ann)
-                    else:
-                        logger.warn(f"no {os.path.join(self.data_root, filename)}, skipping sample; [In label_file {self.label_file}]")
+                    annos.append(ann)
+                    # hack this since remote file systems cost too much time
+                    # if os.path.exists(os.path.join(self.data_root, filename)):
+                    #     annos.append(ann)
+                    # else:
+                    #     logger.warn(f"no {os.path.join(self.data_root, filename)}, skipping sample; [In label_file {self.label_file}]")
         self.anno = annos
         self.num_examples = len(self.anno)
 
@@ -157,16 +161,19 @@ class ITVidTrainDataset(ITImgTrainDataset):
         skip_short_sample=False,
         
     ):
-        # "id index file for webvid"
-        if "webvid" in ann_file[1]:
-            with open("/mnt/bn/dq-storage-ckpt/xulin/datasets/videos/webvid_10m/keys_indexfile.json") as f:
-                self.keys_indexfile = json.load(f) # the correponding index file for each webvid id
+        # # "id index file for webvid"
+        # if "webvid" in ann_file[1]:
+        #     with open("/mnt/bn/dq-storage-ckpt/xulin/datasets/videos/webvid_10m/keys_indexfile.json") as f:
+        #         self.keys_indexfile = json.load(f) # the correponding index file for each webvid id
         
         super().__init__(
-            ann_file, transform, 
-            system=system, role=role,
+            ann_file,
+            transform, 
+            system=system,
+            role=role,
             mm_alone=mm_alone,
-            start_token=start_token, end_token=end_token,
+            start_token=start_token,
+            end_token=end_token,
             random_shuffle=random_shuffle,
             begin_signal=begin_signal,
             end_signal=end_signal,
@@ -192,7 +199,14 @@ class ITVidTrainDataset(ITImgTrainDataset):
             clip = None
             if "start" in ann and "end" in ann:
                 clip = [ann["start"], ann["end"]]
-            video, index, sec = self.load_and_transform_media_data_video(index, ann["image"], return_fps=True, clip=clip, clip_transform=self.clip_transform)
+            video, index, sec = self.load_and_transform_media_data_video(
+                index,
+                ann["image"],
+                return_fps=True,
+                clip=clip,
+                clip_transform=self.clip_transform
+            )
+            
             if self.add_second_msg:
                 # " " should be added in the start and end
                 msg = f" The video contains {len(sec)} frames sampled at {', '.join(sec)} seconds. "
