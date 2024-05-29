@@ -245,7 +245,7 @@ class VideoQABenchDataset(EvalDataset):
         "TGIF_QA": OrderedDict(
             q_json_relpath="TGIF_QA/test_q.json", 
             a_json_relpath="TGIF_QA/test_a.json", 
-            prefix="DATAS/VideoQA/TGIF_QA/tgif_videos", 
+            prefix="DATAS/VideoQA/TGIF_QA/video_gif", 
             data_type="gif", 
             bound=False,
             question_key='question',

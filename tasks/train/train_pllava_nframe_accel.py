@@ -8,7 +8,6 @@ import os.path as osp
 import re
 import itertools
 import functools
-import random
 import math
 import shutil
 from typing import Optional, Union
@@ -16,23 +15,14 @@ from typing import Optional, Union
 import torch
 import torch.nn
 import numpy as np
-from safetensors import safe_open
-
 import logging
 from accelerate.logging import get_logger
 from accelerate import Accelerator, DistributedType
 from accelerate.utils import set_seed
-import deepspeed
 from peft import get_peft_model, LoraConfig, TaskType
 
-
-from dataset import create_dataset, create_loader
-from tasks.shared_utils import get_media_types
-from utils.basic_utils import (MetricLogger, SmoothedValue, setup_seed)
-from utils.config_utils import setup_main
 from transformers.utils import TensorType
 
-from tasks.shared_utils import create_optimizer, create_scheduler
 import copy
 from transformers import  (
     DataCollatorWithPadding,
@@ -40,170 +30,18 @@ from transformers import  (
     AutoModel,
     AutoModelForCausalLM
 )
-from transformers.modeling_utils import load_state_dict, _load_state_dict_into_model
+
 from models.pllava import PllavaConfig, PllavaForConditionalGeneration, PllavaProcessor
+from tasks.shared_utils import create_optimizer, create_scheduler
+from dataset import create_dataset, create_loader
+from tasks.model_utils import load_from_pretrained
+from tasks.shared_utils import get_media_types
+from utils.basic_utils import (MetricLogger, SmoothedValue, setup_seed)
+from utils.config_utils import setup_main
 
-# logger = logging.getLogger(__name__)
-IMAGE_TOKEN='<image>'
-
-logger = get_logger(__name__)
 accelerator: Accelerator = None
-
-def load_state_dict_into_model(model_to_load, state_dict, start_prefix):
-    # copied and altered from:
-    #   https://github.com/huggingface/transformers/blob/9d35edbb30625489bf286a9b15aed0c5a3119c1c/src/transformers/modeling_utils.py#L650
-    #   https://github.com/baaivision/EVA/blob/2ca37a8c0d82b9496754f3fa9c3966b4caa54d75/EVA-CLIP-18B/shinji/eva_clip/factory.py#L168
-
-    # copy state_dict so _load_from_state_dict can modify it
-    metadata = getattr(state_dict, "_metadata", None)
-    state_dict = state_dict.copy()
-    if metadata is not None:
-        state_dict._metadata = metadata
-    error_msgs = []
-    # PyTorch's `_load_from_state_dict` does not copy parameters in a module's descendants
-    # so we need to apply the function recursively.
-    def load(module: torch.nn.Module, prefix=""):
-        local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
-        args = (state_dict, prefix, local_metadata, True, [], [], error_msgs)
-        # Parameters of module and children will start with prefix. We can exit early if there are none in this state_dict
-        if accelerator.distributed_type == DistributedType.DEEPSPEED:
-            import deepspeed
-            with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
-                if torch.distributed.get_rank() == 0:
-                    module._load_from_state_dict(*args)
-        else:
-            module._load_from_state_dict(*args)
-        for name, child in module._modules.items():
-            if child is not None:
-                load(child, prefix + name + ".")
-
-    load(model_to_load, prefix=start_prefix)
-    # Delete `state_dict` so it could be collected by GC earlier. Note that `state_dict` is a copy of the argument, so
-    # it's safe to delete it.
-    del state_dict
-    return error_msgs
-
-def load_from_sharded(model, folder, strict=True, prefer_safe=True):
-    """
-    COPIED and ALTERED FROM https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/modeling_utils.py#L417
-    This is the same as
-    [`torch.nn.Module.load_state_dict`](https://pytorch.org/docs/stable/generated/torch.nn.Module.html?highlight=load_state_dict#torch.nn.Module.load_state_dict)
-    but for a sharded checkpoint.
-
-    This load is performed efficiently: each checkpoint shard is loaded one by one in RAM and deleted after being
-    loaded in the model.
-
-    Args:
-        model (`torch.nn.Module`): The model in which to load the checkpoint.
-        folder (`str` or `os.PathLike`): A path to a folder containing the sharded checkpoint.
-        strict (`bool`, *optional`, defaults to `True`):
-            Whether to strictly enforce that the keys in the model state dict match the keys in the sharded checkpoint.
-        prefer_safe (`bool`, *optional*, defaults to `False`)
-            If both safetensors and PyTorch save files are present in checkpoint and `prefer_safe` is True, the
-            safetensors files will be loaded. Otherwise, PyTorch files are always loaded when possible.
-
-    Returns:
-        `NamedTuple`: A named tuple with `missing_keys` and `unexpected_keys` fields
-            - `missing_keys` is a list of str containing the missing keys
-            - `unexpected_keys` is a list of str containing the unexpected keys
-    """
-    # Load the index
-    from safetensors.torch import load_file as safe_load_file
-    from transformers.utils import (
-        WEIGHTS_INDEX_NAME,
-        SAFE_WEIGHTS_INDEX_NAME,
-        is_safetensors_available, 
-    )
-    from transformers.pytorch_utils import is_torch_greater_or_equal_than_1_13
-    from functools import partial
-    index_file = os.path.join(folder, WEIGHTS_INDEX_NAME)
-    safe_index_file = os.path.join(folder, SAFE_WEIGHTS_INDEX_NAME)
-
-    index_present = os.path.isfile(index_file)
-    safe_index_present = os.path.isfile(safe_index_file)
-
-    if not index_present and not (safe_index_present and is_safetensors_available()):
-        filenames = (
-            (WEIGHTS_INDEX_NAME, SAFE_WEIGHTS_INDEX_NAME) if is_safetensors_available() else (WEIGHTS_INDEX_NAME,)
-        )
-        logger.warning(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}. Assume not sharded, directly loading from model.safetensors. Be aware: also not checking for key matching.")
-        shard_files = ['model.safetensors']
-    else:
-        load_safe = False
-        if safe_index_present:
-            if prefer_safe:
-                if is_safetensors_available():
-                    load_safe = True  # load safe due to preference
-                else:
-                    logger.warning(
-                        f"Cannot load sharded checkpoint at {folder} safely since safetensors is not installed!"
-                    )
-            elif not index_present:
-                load_safe = True  # load safe since we have no other choice
-
-        load_index = safe_index_file if load_safe else index_file
-
-        with open(load_index, "r", encoding="utf-8") as f:
-            index = json.load(f)
-
-        shard_files = list(set(index["weight_map"].values()))
-
-        # If strict=True, error before loading any of the state dicts.
-        loaded_keys = index["weight_map"].keys()
-        model_keys = model.state_dict().keys()
-        missing_keys = [key for key in model_keys if key not in loaded_keys]
-        unexpected_keys = [key for key in loaded_keys if key not in model_keys]
-        if strict and (len(missing_keys) > 0 or len(unexpected_keys) > 0):
-            error_message = f"Error(s) in loading state_dict for {model.__class__.__name__}"
-            if len(missing_keys) > 0:
-                str_missing_keys = ",".join([f'"{k}"' for k in missing_keys])
-                error_message += f"\nMissing key(s): {str_missing_keys}."
-            if len(unexpected_keys) > 0:
-                str_unexpected_keys = ",".join([f'"{k}"' for k in unexpected_keys])
-                error_message += f"\nUnexpected key(s): {str_unexpected_keys}."
-            raise RuntimeError(error_message)
-
-    loader = (
-        safe_load_file
-        if load_safe
-        else partial(torch.load, map_location="cpu", weights_only=is_torch_greater_or_equal_than_1_13)
-    )
-
-    for shard_file in shard_files:
-        shard_filepath = os.path.join(folder, shard_file)
-        state_dict = loader(shard_filepath)
-        # SOMETIMES RUN THROUGH, SOMETIMES DOESN'T WHY???
-        # load_zero_partitions(model, state_dict, True, 'test')
-        error_message = load_state_dict_into_model(model, state_dict, '')
-        if len(error_message) != 0:
-            raise ValueError(f"Error Loading {shard_filepath}: {error_message}")
-        else:
-            logger.info(f"Successfully Loaded from {shard_filepath}")
-        # Make sure memory is freed before we load the next state dict.
-        del state_dict
-        gc.collect()
-
-    # Return the same thing as PyTorch load_state_dict function.
-    return torch.nn.modules.module._IncompatibleKeys(missing_keys, unexpected_keys)
-
-def maybe_zero_3(param, ignore_status=False, name=None):
-    from deepspeed import zero
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
-    if hasattr(param, "ds_id"):
-        if param.ds_status == ZeroParamStatus.NOT_AVAILABLE:
-            if not ignore_status:
-                print(name, 'no ignore status')
-        with zero.GatheredParameters([param]):
-            param = param.data.detach().cpu().clone()
-    else:
-        param = param.detach().cpu().clone()
-    return param
-
-
-def get_state_maybe_zero_3(named_params, keys_to_match=["lora_","multi_modal_projector"]):
-    to_return = {k: t for k, t in named_params if any(key_match in k for key_match in keys_to_match)}
-    to_return = {k: maybe_zero_3(v, ignore_status=True, name=k).cpu() for k, v in to_return.items()}
-    return to_return
+logger = get_logger(__name__)
+IMAGE_TOKEN='<image>'
 
 def setup_dataloaders(config, mode="pt", collate_fn=None):
     # train datasets, create a list of data loaders
@@ -226,7 +64,7 @@ def setup_dataloaders(config, mode="pt", collate_fn=None):
 
 
 def setup_model(
-    config, find_unused_parameters=False
+    config,
 ):
     if config.model.torch_dtype in ('bfloat16', 'float16', 'float32'):
         torch_dtype = eval(f'torch.{config.model.torch_dtype}')
@@ -291,22 +129,10 @@ def setup_model(
         model.language_model.print_trainable_parameters()
 
     if config.model.pretrained_path is not None:
-        logger.info(f"loading pretrained weights from config.model.pretrained_path {config.model.pretrained_path}")
-        state_dict = {}
-        save_fnames = os.listdir(config.model.pretrained_path)
-        if "model.safetensors" in save_fnames:
-            weight_fp = osp.join(config.model.pretrained_path, model.safetensors)
-            logger.info(f"Loading weight from {weight_fp}")
-            state_dict = load_state_dict(weight_fp)
-            _load_state_dict_into_model(model, state_dict, start_prefix='')
+        logger.info(f'Loading from pretrained_path: {config.model.pretrained_path}')        
+        msg = load_from_pretrained(model, config.model.pretrained_path)
 
-        else:
-            logger.info(f"Loading weight from {config.model.pretrained_path}")
-            msg = load_from_sharded(model, config.model.pretrained_path, strict=True)
-
-
-        logger.info(f'loaded: {msg}')        
-        logger.info("Finish loading")
+    logger.info("Finish Constructing Model")
 
     return model, processor
 
@@ -448,7 +274,6 @@ def main(config):
     logger.info(f"train_file: {config.train_file}")
     model, processor = setup_model(
         config,
-        find_unused_parameters=True,
     )
     if accelerator.is_main_process:
         logger.setLevel(logging.INFO)
@@ -505,8 +330,8 @@ def main(config):
             ckpt_paths = [subfolder for subfolder in subfolders if re.match(r'ckpt_resume_[\d.]+M$', subfolder) is not None]
             ckpt_iters = [float(re.findall(r'[\d.]+', x)[0]) for x in ckpt_paths]
         else:
-            ckpt_paths = [subfolder for subfolder in subfolders if re.match("ckpt_[^\d]+", subfolder) is not None]
-            ckpt_iters = [int(s.split(re.match("ckpt_[^\d]+", s).group())[-1]) for s in ckpt_paths]
+            ckpt_paths = [subfolder for subfolder in subfolders if re.match(r"ckpt_[^\d]+", subfolder) is not None]
+            ckpt_iters = [int(s.split(re.match(r"ckpt_[^\d]+", s).group())[-1]) for s in ckpt_paths]
 
     
         resume_cur_epoch_step=0

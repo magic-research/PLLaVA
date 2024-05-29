@@ -1,16 +1,22 @@
 
 import torch
 import os
-from peft import get_peft_model, LoraConfig, TaskType
 from safetensors import safe_open
-from peft import PeftModel
-from tasks.eval.eval_utils import Conversation
-from models.pllava import PllavaProcessor, PllavaForConditionalGeneration, PllavaConfig
 from accelerate import init_empty_weights, dispatch_model, infer_auto_device_map,load_checkpoint_in_model
 from accelerate.utils import get_balanced_memory
-
 from transformers import StoppingCriteria
 from transformers.modeling_utils import load_sharded_checkpoint
+from peft import get_peft_model, LoraConfig, TaskType
+from peft import PeftModel
+
+from tasks.model_utils import load_from_pretrained
+from tasks.eval.eval_utils import Conversation
+from models.pllava import PllavaProcessor, PllavaForConditionalGeneration, PllavaConfig
+
+
+
+
+
 class KeywordsStoppingCriteria(StoppingCriteria):
     def __init__(self, keywords, tokenizer, input_ids):
         self.keywords = keywords
@@ -80,8 +86,8 @@ def load_pllava(
     # load weights
     if weight_dir is not None:
         print(f'loading checkpoint from {weight_dir}')
-        msg = load_sharded_checkpoint(model, weight_dir, strict=True)
-        print(msg)
+        load_from_pretrained(model, weight_dir)
+        print(f'done loading')
 
     # dispatch model weight
     if use_multi_gpus:

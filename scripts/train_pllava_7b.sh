@@ -16,15 +16,15 @@ save_steps=$[$num_save_samples/($batch_size*$num_gpus)] # save step is base on t
 ckpt_steps=$[$save_steps/10]
 gradient_accumulation_steps=$[$full_batch_size/($batch_size*$num_gpus)] # some how the gradient accumulation steps should be computed as it was to pass in to Accelerate for not knowing the total GPUs, thus not able to compute afterwards. Align this with your accelerate configuration
 repo_id=llava-hf/llava-v1.6-vicuna-7b-hf
-# pretrained_path=MODELS/pllava-7b
+pretrained_path=MODELS/pllava-7b
 config_file=tasks/train/config_pllava_nframe.py
-# accel_config=scripts/accel_config_deepspeed_zero3_trainLLM7B.yaml # 80G is enough for running LoRA training
-accel_config=scripts/accel_config_multigpu.yaml # 80G is enough for running LoRA training
+accel_config=scripts/accel_config_deepspeed_zero3_trainLLM7B.yaml # 80G is enough for running LoRA training
+# accel_config=scripts/accel_config_multigpu.yaml # 80G is enough for running LoRA training
 extra_kwargs="\
     model.repo_id $repo_id \
     model.freeze_lm True \
     model.use_lora True \
-    # model.pretrained_path $pretrained_path \
+    model.pretrained_path $pretrained_path \
 "
 
 echo full batch size: $full_batch_size
