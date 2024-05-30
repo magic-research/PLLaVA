@@ -11,8 +11,6 @@ num_workers = 8
 save_steps=10000
 ckpt_steps=1000
 stop_key = None
-deepspeed=False
-highres=None
 # ========================= input ==========================
 num_frames = 16
 num_frames_test = 1
@@ -36,8 +34,9 @@ inputs = dict(
     batch_size_test=dict(image="${batch_size}", video="${batch_size}"),
 )
 
+# ========================= model ==========================
 model = dict(
-    repo_id="llava-hf/llava-1.5-7b-hf",
+    repo_id="llava-hf/llava-v1.6-34b-hf",
     pretrained_path=None,
     load_from_origin=False,
     origin_vision="",
@@ -58,19 +57,19 @@ model = dict(
     pooling_method='avg',
     use_pooling=True,
     frame_shape=(24,24),
-    pooling_shape=(16,8,8),
+    pooling_shape=(16,12,12),
 )
 preprocess = dict(
     system="",
-    mm_alone=True,
-    image_token_index=64002,
-    random_shuffle=True,
-    add_second_msg=True,
+    mm_alone=False,
+    random_shuffle=False, # shuffles the conversation (if multi round)
+    add_second_msg=False,
     roles=['<|im_start|>user\n', '<|im_start|>assistant\n'],
     end_signal=('<|im_end|>\n', '<|im_end|>\n'),
     begin_signal='',
     dataset_image_placeholder='<Image></Image>',
     dataset_video_placeholder='<Video></Video>',
+    image_token_index=64002,
     max_txt_l = "${max_txt_l}",
     ignore_index=-100, # same as torch softmax ignore index 
     center_pad=False,
@@ -91,12 +90,10 @@ optimizer = dict(
     different_lr=dict(enable=False, module_names=[], lr=1e-3),
 )
 
-# scheduler = dict(sched="cosine", epochs=3, min_lr_multi=0.25, warmup_epochs=0.6)
-# scheduler = dict(sched="cosine", epochs=3, min_lr_multi=0.25, warmup_epochs=0.6)
 scheduler = dict(
     is_videochat2_custom=False,
     sched="cosine", 
-    epochs=2, 
+    epochs=3, 
     warmup_ratio=0.2,
     min_lr_multi=0.25)
 

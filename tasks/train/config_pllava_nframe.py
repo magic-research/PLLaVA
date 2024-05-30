@@ -57,13 +57,13 @@ model = dict(
     pooling_method='avg',
     use_pooling=True,
     frame_shape=(24,24),
-    pooling_shape=(16,8,8),
+    pooling_shape=(16,12,12),
 )
 preprocess = dict(
     system="",
-    mm_alone=True,
-    random_shuffle=True, # shuffles the conversation (if multi round)
-    add_second_msg=True,
+    mm_alone=False,
+    random_shuffle=False, # shuffles the conversation (if multi round)
+    add_second_msg=False,
     roles=['USER:', 'ASSISTANT:'],
     end_signal=(' ', '</s>'),
     begin_signal='',
