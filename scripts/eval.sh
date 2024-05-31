@@ -8,7 +8,6 @@ num_frames=16
 # shared_args="\
 #     --pretrained_model_name_or_path ${model_dir} \
 #     --num_frames ${num_frames} \
-#     --pooling_shape 16-12-12 \
 
 # " # this will be appended to each ecaluation command
 
