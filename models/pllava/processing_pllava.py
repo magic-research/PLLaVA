@@ -56,6 +56,7 @@ class PllavaProcessor(ProcessorMixin):
     """
 
     attributes = ["image_processor", "tokenizer"]
+    # image_processor_class = "AutoImageProcessor"
     image_processor_class = "CLIPImageProcessor"
     tokenizer_class = "AutoTokenizer"
 
@@ -74,7 +75,8 @@ class PllavaProcessor(ProcessorMixin):
         min_long_short_rate = min(long_short_rates)
         min_long_short_video_idx = long_short_rates.index(min_long_short_rate)
 
-        clip_resolution = self.image_processor.size['shortest_edge']
+        clip_resolution = self.image_processor.size['shortest_edge'] if 'shortest_edge' in self.image_processor.size \
+                          else self.image_processor.size['height']
         out_video_spatial_size = video_spatial_sizes[min_long_short_video_idx]
         out_videos_short_edge = max(min(size) for size in video_spatial_sizes)
         resize_longest_edge = max(max(size) for size in video_spatial_sizes)
@@ -155,7 +157,8 @@ class PllavaProcessor(ProcessorMixin):
             max_size=longest_edge,
             input_data_format=input_data_format,
         )
-        clip_resolution = self.image_processor.size['shortest_edge']
+        clip_resolution = self.image_processor.size['shortest_edge'] if 'shortest_edge' in self.image_processor.size \
+                          else self.image_processor.size['height']
         if min(output_size) < clip_resolution:
             output_size = get_resize_output_image_size(
                 image,
@@ -254,7 +257,6 @@ class PllavaProcessor(ProcessorMixin):
 
                 pixel_values = self.image_processor(images, return_tensors='np')["pixel_values"]
                 pixel_values_list.append(pixel_values)
-
             pixel_values = np.concatenate(pixel_values_list)
             data.update(pixel_values=pixel_values)
             

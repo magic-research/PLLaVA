@@ -130,7 +130,7 @@ def setup_model(
 
     if config.model.pretrained_path is not None:
         logger.info(f'Loading from pretrained_path: {config.model.pretrained_path}')        
-        msg = load_from_pretrained(model, config.model.pretrained_path)
+        msg = load_from_pretrained(model, config.model.pretrained_path, strict=not config.model.use_lora)
 
     logger.info("Finish Constructing Model")
 

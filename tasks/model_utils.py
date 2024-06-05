@@ -7,7 +7,7 @@ import torch
 from transformers.integrations import is_deepspeed_zero3_enabled
 logger = logging.getLogger(__name__)
 
-@torch.no_grad
+@torch.no_grad()
 def load_state_dict_into_model(model_to_load, state_dict, start_prefix):
     # copied and altered from:
     #   https://github.com/huggingface/transformers/blob/9d35edbb30625489bf286a9b15aed0c5a3119c1c/src/transformers/modeling_utils.py#L650
@@ -42,8 +42,8 @@ def load_state_dict_into_model(model_to_load, state_dict, start_prefix):
     del state_dict
     return error_msgs
 
-@torch.no_grad
-def load_from_pretrained(model, folder, prefer_safe=True):
+@torch.no_grad()
+def load_from_pretrained(model, folder, prefer_safe=True, strict=True):
     """
     COPIED and ALTERED FROM https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/modeling_utils.py#L417
     This is the same as
@@ -92,9 +92,9 @@ def load_from_pretrained(model, folder, prefer_safe=True):
         logger.warning(f"Can't find a checkpoint index ({' or '.join(filenames)}) in {folder}. Assume not sharded, directly loading from model.safetensors. Be aware: also not checking for key matching.")
 
         shard_files = ['model.safetensors']
-        strict, load_safe = False, True
+        load_safe = True
     else:
-        strict, load_safe = True, False # strict if whole model is saved (sharded)
+        load_safe = False # strict if whole model is saved (sharded)
         if safe_index_present:
             if prefer_safe:
                 if is_safetensors_available():

@@ -129,7 +129,7 @@ def infer_vcgbench(
         model=model,
         processor=processor,
         img_list=video_list,
-        max_new_tokens=100,
+        max_new_tokens=512,
         do_sample=False,
         print_res=print_res,
         stop_criteria_keywords=stop_criteria_keywords

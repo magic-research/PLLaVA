@@ -31,9 +31,7 @@ class KeywordsStoppingCriteria(StoppingCriteria):
             self.start_len = self.input_ids.shape[1]
             return False
         else:
-            outputs = self.tokenizer.batch_decode(
-                output_ids[:, self.start_len:], skip_special_tokens=True
-            )
+            outputs = self.tokenizer.batch_decode(output_ids[:, self.start_len:], skip_special_tokens=False)
             flag = True
             for output in outputs:
                 for keyword in self.keywords:
@@ -86,7 +84,7 @@ def load_pllava(
     # load weights
     if weight_dir is not None:
         print(f'loading checkpoint from {weight_dir}')
-        load_from_pretrained(model, weight_dir)
+        load_from_pretrained(model, weight_dir, strict=not use_lora)
         print(f'done loading')
 
     # dispatch model weight
@@ -139,20 +137,25 @@ def pllava_answer(conv: Conversation, model, processor, img_list, do_sample=True
     inputs = processor(text=prompt, images=img_list, return_tensors="pt")
     if inputs['pixel_values'] is None:
         inputs.pop('pixel_values')
-    inputs = inputs.to(model.device)
-    
-    # set up stopping criteria
-    if stop_criteria_keywords is not None:
-        stopping_criteria = [KeywordsStoppingCriteria(stop_criteria_keywords, processor.tokenizer, inputs["input_ids"])]
-    else:
-        stopping_criteria= None
+    inputs = inputs.to(device=model.device, dtype=model.dtype)
+    generation_kwargs = {
+        "do_sample": do_sample,
+        "max_new_tokens": max_new_tokens,
+        "num_beams": num_beams,
+        "min_length": min_length,
+        "top_p": top_p,
+        "repetition_penalty": repetition_penalty,
+        "length_penalty": length_penalty,
+        "temperature": temperature,
+        "eos_token_id": processor.tokenizer.convert_tokens_to_ids(conv.sep[1]),
+        "stopping_criteria": [KeywordsStoppingCriteria(stop_criteria_keywords + conv.sep, processor.tokenizer, inputs.input_ids)] if stop_criteria_keywords is not None \
+                              else [ KeywordsStoppingCriteria(conv.sep, processor.tokenizer, inputs.input_ids)] 
+
+    }
 
     with torch.no_grad():
-        output_token = model.generate(**inputs, media_type='video',
-                                      do_sample=do_sample, max_new_tokens=max_new_tokens, num_beams=num_beams, min_length=min_length, 
-                                      top_p=top_p, repetition_penalty=repetition_penalty, length_penalty=length_penalty, temperature=temperature, 
-                                      stopping_criteria=stopping_criteria,)
-        output_text = processor.batch_decode(output_token, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        output_token = model.generate(**inputs, media_type='video', **generation_kwargs, )
+        output_text = processor.batch_decode(output_token, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0]
 
     if print_res: # debug usage
         print('### PROMPTING LM WITH: ', prompt)

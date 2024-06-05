@@ -377,9 +377,13 @@ class PllavaForConditionalGeneration(PllavaPreTrainedModel):
         # The current code only supports same video input, with predefined multimodal sequence number per sample.
         # If the weights are not correctly loaded, the padding embed would be all zero, and cause bug.
         # See https://github.com/huggingface/transformers/issues/22017 for interesting discussion.
-        # TODO: Figure how to load zero3 weights.
+        image_to_overwrite = torch.full(
+            (batch_size, max_embed_dim), True, dtype=torch.bool, device=inputs_embeds.device
+        )
         image_to_overwrite = torch.all(final_embedding == 0, dim=-1)
-        image_to_overwrite &= image_to_overwrite.cumsum(-1) > nb_image_pad[:, None].to(target_device)
+        image_to_overwrite[batch_indices, text_to_overwrite] = False
+        image_to_overwrite &= image_to_overwrite.cumsum(-1) - 1 >= nb_image_pad[:, None].to(target_device)
+        # image_to_overwrite &= image_to_overwrite.cumsum(-1) > nb_image_pad[:, None].to(target_device)
 
         # # somthing really weird here.
         # temp1 = (image_to_overwrite.cumsum(-1) > nb_image_pad[:, None].to(target_device)) & image_to_overwrite
@@ -477,8 +481,7 @@ class PllavaForConditionalGeneration(PllavaPreTrainedModel):
                 if vision_feature_select_strategy == "default":
                     selected_image_feature = selected_image_feature[:, 1:]
                 elif vision_feature_select_strategy == "full":
-                    raise ValueError("not implemented")
-                    selected_image_feature = selected_image_feature
+                    selected_image_feature = selected_image_feature # some model needs this (siglip)
                 else:
                     raise ValueError(
                         f"Unexpected select feature strategy: {self.config.vision_feature_select_strategy}"

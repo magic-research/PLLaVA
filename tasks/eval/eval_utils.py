@@ -80,7 +80,7 @@ class Conversation(EasyDict):
     def get_prompt(self):
         sep = [self.sep for _ in self.roles] if isinstance(self.sep, str) else self.sep  # if only one sep given, then both sep are the sames
         sep = dict(zip(self.roles, sep))
-        ret = self.system + sep[self.roles[0]] if self.system != "" else ""
+        ret = "" + self.system
         for i, (role, message) in enumerate(self.messages):
             # if is last msg(the prompt for assistant), if answer prompt exists, no sep added
             if i+1 == len(self.messages):
@@ -147,73 +147,13 @@ conv_plain_v1 = Conversation(
     mm_token='<image>'
 )
 
-# Attention to the roles[0] "USER: " has a space!
-conv_eval_vcg = Conversation(
-    system="You are Video-ChatGPT, a large vision-language assistant. "
-           "You are able to understand the video content that the user provides, and assist the user with a variety of tasks using natural language."
-           "Follow the instructions carefully and explain your answers in detail based on the provided video.",
-    roles=("USER: ", "ASSISTANT:"),
-    messages=[],
-    sep=[" ","</s>"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_ALONE,
-)
-
-conv_eval_vcg_llavanext = Conversation(
-    system="You are Video-ChatGPT, a large vision-language assistant. "
-           "You are able to understand the video content that the user provides, and assist the user with a variety of tasks using natural language."
-           "Follow the instructions carefully and explain your answers in detail based on the provided video.",
-    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
-    messages=[],
-    sep=["<|im_end|>\n","<|im_end|>\n"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_ALONE,
+SYSTEM_VCGBENCH=(
+    "You are Video-ChatGPT, a large vision-language assistant. "
+    "You are able to understand the video content that the user provides, and assist the user with a variety of tasks using natural language."
+    "Follow the instructions carefully and explain your answers in detail based on the provided video."
 )
 
 SYSTEM_MVBENCH="Carefully watch the video and pay attention to the cause and sequence of events, the detail and movement of objects, and the action and pose of persons. Based on your observations, select the best option that accurately addresses the question.\n"
-conv_eval_mvbench = Conversation(
-    system=SYSTEM_MVBENCH,
-    roles=("USER: ", "ASSISTANT:"),
-    messages=[],
-    sep=[" ","</s>"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_ALONE,
-)
-conv_eval_mvbench_llavanext = Conversation(
-    system="You are Video-ChatGPT, a large vision-language assistant. "
-           "You are able to understand the video content that the user provides, and assist the user with a variety of tasks using natural language."
-           "Follow the instructions carefully and explain your answers in detail based on the provided video.",
-    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
-    messages=[],
-    sep=["<|im_end|>\n","<|im_end|>\n"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_ALONE,
-)
-
-
-conv_eval_videoqabench = Conversation(
-    system="",
-    roles=("USER: ", "ASSISTANT:"),
-    messages=[],
-    sep=[" ","</s>"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_INTERLEAF,
-    pre_query_prompt="The input consists of a sequence of key frames from a video. Answer the question concisely first and followed by significant events, characters, or objects that appear throughout the frames. Question:",
-    post_query_prompt="\n",
-    answer_prompt='\nAnswer: In the video,'
-)
-
-conv_eval_videoqa_llavanext = Conversation(
-    system="<|im_start|>system\nAnswer the question.",
-    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
-    messages=[],
-    sep=["<|im_end|>\n","<|im_end|>\n"],
-    mm_token='<image>\n',
-    mm_style=MultiModalConvStyle.MM_INTERLEAF,
-    pre_query_prompt="The input consists of a sequence of key frames from a video. Answer the question concisely first and followed by significant events, characters, or objects that appear throughout the frames. Question:",
-    post_query_prompt="\n",
-    answer_prompt='\nAnswer: In the video,'
-)
 
 
 SYSTEM_RECAPTION="""You are a powerful Video Magic ChatBot, a large vision-language assistant. 
@@ -223,8 +163,74 @@ The user will provide you with the video and maybe some extra noisy information 
 1. Follow the user's instruction.
 2. Be critical yet believe in yourself.
 """
+
+SYSTEM_VIDEOQABENCH=("Answer the question.")
+
+PRE_QUERY_PROMPT_VIDEOQABENCH="The input consists of a sequence of key frames from a video. Answer the question concisely first and followed by significant events, characters, or objects that appear throughout the frames. Question:"
+
+# Attention to the roles[0] "USER: " has a space!
+conv_eval_vcg = Conversation(
+    system=f"{SYSTEM_VCGBENCH} ",
+    roles=("USER: ", "ASSISTANT: "),
+    messages=[],
+    sep=[" ","</s>"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+conv_eval_vcg_llavanext = Conversation(
+    system=f"{SYSTEM_VCGBENCH}<|im_end|>\n",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|im_end|>\n","<|im_end|>\n"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+conv_eval_mvbench = Conversation(
+    system=f"{SYSTEM_MVBENCH} ",
+    roles=("USER: ", "ASSISTANT: "),
+    messages=[],
+    sep=[" ","</s>"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+conv_eval_mvbench_llavanext = Conversation(
+    system=f"{SYSTEM_MVBENCH}<|im_end|>\n",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|im_end|>\n","<|im_end|>\n"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+
+conv_eval_videoqabench = Conversation(
+    system=" ",
+    roles=("USER: ", "ASSISTANT: "),
+    messages=[],
+    sep=[" ","</s>"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_INTERLEAF,
+    pre_query_prompt=PRE_QUERY_PROMPT_VIDEOQABENCH,
+    post_query_prompt="\n",
+    answer_prompt='\nAnswer: In the video,'
+)
+
+conv_eval_videoqa_llavanext = Conversation(
+    system=f"<|im_start|>system\n{SYSTEM_VIDEOQABENCH}<|im_end|>\n",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|im_end|>\n","<|im_end|>\n"],
+    mm_token='<image>\n',
+    mm_style=MultiModalConvStyle.MM_INTERLEAF,
+    pre_query_prompt=PRE_QUERY_PROMPT_VIDEOQABENCH,
+    post_query_prompt="\n",
+    answer_prompt='\nAnswer: In the video,'
+)
+
 conv_eval_recaption = Conversation(
-    system=SYSTEM_RECAPTION,
+    system=f"{SYSTEM_RECAPTION} ",
     roles=("USER: ", "ASSISTANT:"),
     messages=[],
     sep=[" ","</s>"],
@@ -234,12 +240,82 @@ conv_eval_recaption = Conversation(
 
 
 conv_eval_recaption_llavanext = Conversation(
-    system=SYSTEM_RECAPTION,
+    system=f"{SYSTEM_RECAPTION}<|im_end|>\n",
     roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
     messages=[],
     sep=["<|im_end|>\n","<|im_end|>\n"],
     mm_token='<image>\n',
     mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+
+eval_vcgbench_pinternvl = Conversation(
+    system=f"{SYSTEM_RECAPTION}<|im_end|>\n",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|im_end|>\n","<|im_end|>\n"],
+    mm_token='<IMG_CONTEXT>' * 2304 + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+eval_vcgbench_llama3 = Conversation(
+    system=f"<|start_header_id|>system<|end_header_id|>\n\n{SYSTEM_VCGBENCH}<|eot_id|>",
+    roles=("<|start_header_id|>user<|end_header_id|>\n\n", "<|start_header_id|>assistant<|end_header_id|>\n\n"),
+    messages=[],
+    sep=["<|eot_id|>","<|eot_id|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+eval_mvbench_llama3 = Conversation(
+    system=f"<|start_header_id|>system<|end_header_id|>\n\n{SYSTEM_MVBENCH}<|eot_id|>",
+    roles=("<|start_header_id|>user<|end_header_id|>\n\n", "<|start_header_id|>assistant<|end_header_id|>\n\n"),
+    messages=[],
+    sep=["<|eot_id|>","<|eot_id|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+eval_videoqabench_llama3 = Conversation(
+    system=f"{SYSTEM_VIDEOQABENCH}<|eot_id|>",
+    roles=("<|start_header_id|>user<|end_header_id|>\n\n", "<|start_header_id|>assistant<|end_header_id|>\n\n"),
+    messages=[],
+    sep=["<|eot_id|>","<|eot_id|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+    pre_query_prompt=PRE_QUERY_PROMPT_VIDEOQABENCH,
+    post_query_prompt="\n",
+    answer_prompt='\nAnswer: In the video,'
+)
+
+eval_vcgbench_hermes_2 = Conversation(
+    system=f"<|im_start|>system\n{SYSTEM_VCGBENCH}<|im_end|>",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|im_end|>","<|im_end|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+eval_mvbench_hermes_2 = Conversation(
+    system=f"<|im_start|>system\n{SYSTEM_MVBENCH}<|im_end|>",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
+    messages=[],
+    sep=["<|eot_id|>","<|eot_id|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+)
+
+eval_videoqabench_hermes_2 = Conversation(
+    system=f"{SYSTEM_VIDEOQABENCH}<|eot_id|>",
+    roles=("<|start_header_id|>user<|end_header_id|>\n\n", "<|start_header_id|>assistant<|end_header_id|>\n\n"),
+    messages=[],
+    sep=["<|eot_id|>","<|eot_id|>"],
+    mm_token='<image>' + '\n',
+    mm_style=MultiModalConvStyle.MM_ALONE,
+    pre_query_prompt=PRE_QUERY_PROMPT_VIDEOQABENCH,
+    post_query_prompt="\n",
+    answer_prompt='\nAnswer: In the video,'
 )
 
 
@@ -253,8 +329,14 @@ conv_templates = {
     "eval_videoqa_llavanext": conv_eval_videoqa_llavanext,
     "eval_recaption": conv_eval_recaption,
     "eval_recaption_llavanext": conv_eval_recaption_llavanext,
+    "eval_vcgbench_pinternvl": eval_vcgbench_pinternvl,
+    "eval_vcgbench_llama3": eval_vcgbench_llama3,
+    "eval_mvbench_llama3": eval_mvbench_llama3,
+    "eval_videoqabench_llama3": eval_videoqabench_llama3,
+    "eval_vcgbench_hermes_2": eval_vcgbench_hermes_2,
+    "eval_mvbench_hermes_2": eval_mvbench_hermes_2,
+    "eval_videoqabench_hermes_2": eval_videoqabench_hermes_2,
 }
-
 
 class EvalDataset(Dataset):
 
