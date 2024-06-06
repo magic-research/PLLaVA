@@ -16,6 +16,7 @@
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
 from transformers.models.auto import CONFIG_MAPPING
+from utils.basic_utils import is_gpu_ampere_or_later
 
 
 logger = logging.get_logger(__name__)
@@ -141,6 +142,8 @@ class PllavaConfig(PretrainedConfig):
         elif text_config is None:
             tmp_config = {"_attn_implementation":"flash_attention_2",
                           "gradient_checkpointing": self.gradient_checkpointing}
+            if not is_gpu_ampere_or_later():
+                del tmp_config['_attn_implementation']
             self.text_config = CONFIG_MAPPING["llama"](**tmp_config)
             self.text_config.gradient_checkpointing = self.gradient_checkpointing
         # self.text_config["_attn_implementation"]="flash_attention_2"  # xl: temporal hard code

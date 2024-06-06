@@ -36,6 +36,8 @@ import einops
 
 from .configuration_pllava import PllavaConfig
 import pickle
+from model_utils import is_gpu_ampere_or_later
+
 
 logger = logging.get_logger(__name__)
 
@@ -175,7 +177,7 @@ class PllavaPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["LlavaVisionAttention"]
     _skip_keys_device_placement = "past_key_values"
-    _supports_flash_attn_2 = True
+    _supports_flash_attn_2 = is_gpu_ampere_or_later()
 
     def _init_weights(self, module):
         # important: this ported version of Llava isn't meant for training from scratch - only
@@ -291,7 +293,10 @@ class PllavaForConditionalGeneration(PllavaPreTrainedModel):
         self.vision_tower = AutoModel.from_config(config.vision_config)
         self.multi_modal_projector = PllavaMultiModalProjector(config)
         self.vocab_size = config.vocab_size
-        self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=config.torch_dtype, attn_implementation="flash_attention_2")
+        if is_gpu_ampere_or_later():
+            self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=config.torch_dtype, attn_implementation="flash_attention_2")
+        else:
+            self.language_model = AutoModelForCausalLM.from_config(config.text_config, torch_dtype=config.torch_dtype)
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else self.config.text_config.pad_token_id
         assert self.pad_token_id is not None, 'provide the model with pad_token_id, this would be used to arranging new embedings'
         self.post_init()

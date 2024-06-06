@@ -12,10 +12,15 @@ from typing import List, Union
 
 import torch
 import torch.distributed as dist
+from torch.cuda import get_device_properties
 from .distributed import is_dist_avail_and_initialized
 
 
 logger = logging.getLogger(__name__)
+
+
+def is_gpu_ampere_or_later():
+    return get_device_properties(0).major >= 8
 
 
 class SmoothedValue(object):
