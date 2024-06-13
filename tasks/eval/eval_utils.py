@@ -429,7 +429,7 @@ class ChatPllava:
             split_tag = "<|im_start|> assistant\n"
         else:
             split_tag = conv.roles[-1]
-        output_text = output_text.split(split_tag)[-1].rstrip(conv.sep[1])
+        output_text = output_text.split(split_tag)[-1].split(conv.sep[1])[0]
         conv.assistant_response(output_text)
         return output_text, output_token.cpu().numpy(), conv
     
