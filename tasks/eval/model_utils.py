@@ -10,6 +10,8 @@ from accelerate import init_empty_weights, dispatch_model, infer_auto_device_map
 from accelerate.utils import get_balanced_memory
 
 from transformers import StoppingCriteria
+from utils.basic_utils import is_gpu_ampere_or_later
+
 class KeywordsStoppingCriteria(StoppingCriteria):
     def __init__(self, keywords, tokenizer, input_ids):
         self.keywords = keywords
@@ -45,6 +47,7 @@ def load_pllava(repo_id, num_frames, use_lora=False, weight_dir=None, lora_alpha
         kwargs.update(pooling_shape=(0,12,12)) # produce a bug if ever usen the pooling projector
     config = PllavaConfig.from_pretrained(
         repo_id if not use_lora else weight_dir,
+        use_flash_attention_2=is_gpu_ampere_or_later(),
         pooling_shape=pooling_shape,
         **kwargs,
     )
